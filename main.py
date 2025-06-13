@@ -67,6 +67,7 @@ def compare_texts(text1, text2):
         }
         .added {
             background-color: #ddffdd;
+            text-decoration: underline;
         }
         .changed-old {
             background-color: #ffecec;
@@ -74,11 +75,20 @@ def compare_texts(text1, text2):
         }
         .changed-new {
             background-color: #e6ffec;
+            text-decoration: underline;
         }
         .line-number {
             color: #999;
             margin-right: 10px;
             user-select: none;
+        }
+        .word-added {
+            background-color: #a0ffa0;
+            text-decoration: underline;
+        }
+        .word-removed {
+            background-color: #ffb6b6;
+            text-decoration: line-through;
         }
     </style>
     <div class="diff-container">
@@ -104,14 +114,13 @@ def compare_texts(text1, text2):
                 left_lines.append(('empty', ''))
                 right_lines.append(('added', line))
         elif tag == 'replace':
-            # Para substituições, verifica se podemos mostrar como alteração lado a lado
             max_len = max(i2-i1, j2-j1)
             for k in range(max_len):
                 old_line = text1_lines[i1+k] if k < (i2-i1) else ''
                 new_line = text2_lines[j1+k] if k < (j2-j1) else ''
                 
                 if old_line and new_line:
-                    # Faz diff palavra por palavra
+                    # Faz diff palavra por palavra com sublinhado
                     d = Differ()
                     diff = list(d.compare(old_line.split(), new_line.split()))
                     
@@ -120,9 +129,9 @@ def compare_texts(text1, text2):
                     
                     for word in diff:
                         if word.startswith('- '):
-                            old_text.append(f'<span class="changed-old">{word[2:]}</span>')
+                            old_text.append(f'<span class="word-removed">{word[2:]}</span>')
                         elif word.startswith('+ '):
-                            new_text.append(f'<span class="changed-new">{word[2:]}</span>')
+                            new_text.append(f'<span class="word-added">{word[2:]}</span>')
                         elif word.startswith('  '):
                             old_text.append(word[2:])
                             new_text.append(word[2:])
