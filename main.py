@@ -6,50 +6,6 @@ from io import BytesIO
 from openpyxl import Workbook
 from openpyxl.styles import PatternFill
 
-def show_under_development():
-    html_content = """
-    <div style='
-        max-width: 500px;
-        margin: 30px auto;
-        padding: 20px;
-        background: white;
-        border-radius: 8px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        text-align: center;
-    '>
-        <h3 style='color: #333;'>🚧 Comparador de Arquivos</h3>
-        
-        <div style='
-            height: 20px;
-            background: #e9ecef;
-            border-radius: 10px;
-            margin: 20px 0;
-            overflow: hidden;
-        '>
-            <div style='
-                height: 100%;
-                width: 45%;
-                background: #17a2b8;
-                border-radius: 10px;
-                animation: progress 2s ease-in-out infinite;
-            '></div>
-        </div>
-        
-        <p style='color: #6c757d;'>
-            Estamos desenvolvendo esta funcionalidade com cuidado.<br>
-            Previsão de lançamento: em breve!
-        </p>
-        
-        <style>
-            @keyframes progress {
-                0% {width: 45%;}
-                50% {width: 55%;}
-                100% {width: 45%;}
-            }
-        </style>
-    </div>
-    """
-    return html_content
 
 # Configuração da página
 st.set_page_config(page_title="Comparador de Arquivos GNCP", layout="wide")
@@ -186,28 +142,27 @@ with tab1:
 
 with tab2:
     st.header("Comparador de Planilhas")
-    st.markdown(show_under_development(), unsafe_allow_html=True)
-    # col1, col2 = st.columns(2)
+    col1, col2 = st.columns(2)
     
-    # with col1:
-    #     arq1 = st.file_uploader("Carregar Arquivo 1", type=["xlsx", "csv"], key="file1")
-    # with col2:
-    #     arq2 = st.file_uploader("Carregar Arquivo 2", type=["xlsx", "csv"], key="file2")
+    with col1:
+        arq1 = st.file_uploader("Carregar Arquivo 1", type=["xlsx", "csv"], key="file1")
+    with col2:
+        arq2 = st.file_uploader("Carregar Arquivo 2", type=["xlsx", "csv"], key="file2")
     
-    # if arq1 and arq2:
-    #     if st.button("Comparar Arquivos"):
-    #         with st.spinner("Processando comparação..."):
-    #             result, diff_df = compare_excel(arq1, arq2)
+    if arq1 and arq2:
+        if st.button("Comparar Arquivos"):
+            with st.spinner("Processando comparação..."):
+                result, diff_df = compare_excel(arq1, arq2)
                 
-    #             if result and not diff_df.empty:
-    #                 st.success("Comparação concluída!")
-    #                 st.dataframe(diff_df)
+                if result and not diff_df.empty:
+                    st.success("Comparação concluída!")
+                    st.dataframe(diff_df)
                     
-    #                 st.download_button(
-    #                     label="Baixar Excel com Diferenças",
-    #                     data=result,
-    #                     file_name="comparacao.xlsx",
-    #                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    #                 )
-    #             else:
-    #                 st.info("Os arquivos são idênticos!")
+                    st.download_button(
+                        label="Baixar Excel com Diferenças",
+                        data=result,
+                        file_name="comparacao.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    )
+                else:
+                    st.info("Os arquivos são idênticos!")
