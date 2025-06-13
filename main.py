@@ -75,7 +75,7 @@ def compare_texts(text1, text2):
             text-decoration: line-through;
         }
         .changed-new {
-            background-color: #4ad66d;
+            background-color: #abff4f;
             text-decoration: underline;
         }
         .line-number {
