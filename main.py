@@ -70,11 +70,12 @@ def compare_texts(text1, text2):
             background-color: #ddffdd;
         }
         .changed-old {
-            background-color: #ffecec;
+            background-color: #ff758f;
             text-decoration: line-through;
         }
         .changed-new {
-            background-color: #e6ffec;
+            background-color: #4ad66d;
+            text-decoration: underline;
         }
         .line-number {
             color: #999;
