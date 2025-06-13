@@ -33,85 +33,136 @@ def get_legal_reference(text):
     return "Texto"
 # Função para comparar textos
 def compare_texts(text1, text2):
+    # Divide os textos em linhas
     text1_lines = [line.strip() for line in text1.splitlines() if line.strip()]
     text2_lines = [line.strip() for line in text2.splitlines() if line.strip()]
     
-    # Verifica se o texto original está completamente contido no novo texto
-    if len(text2_lines) > len(text1_lines):
-        is_appended = True
-        for i in range(len(text1_lines)):
-            if text1_lines[i] != text2_lines[i]:
-                is_appended = False
-                break
-        
-        if is_appended:
-            result = []
-            # Mostra todo o texto original normalmente
-            for line in text1_lines:
-                result.append(f"<div style='margin: 5px 0;'>{line}</div>")
-            
-            # Mostra o texto adicionado como inserção
-            
-            for line in text2_lines[len(text1_lines):]:
-                ref = get_legal_reference(line)
-                result.append(f"<div style='color: green; margin: 5px 0 5px 0px;'>"
-                            f"<span style='text-decoration: underline;'><span>{line}</div>")
-            
-            return "".join(result)
+    # Usa SequenceMatcher para alinhar as linhas
+    matcher = SequenceMatcher(None, text1_lines, text2_lines)
     
-    # Se não for um caso de simples acréscimo, usa a comparação normal
-    differ = difflib.SequenceMatcher(None, text1_lines, text2_lines)
+    # Prepara o resultado em HTML
     result = []
+    result.append("""
+    <style>
+        .diff-container {
+            display: flex;
+            width: 100%;
+            font-family: monospace;
+        }
+        .diff-column {
+            flex: 1;
+            padding: 10px;
+        }
+        .diff-line {
+            white-space: pre-wrap;
+            margin: 2px 0;
+            padding: 2px;
+        }
+        .unchanged {
+            background-color: #f8f8f8;
+        }
+        .deleted {
+            background-color: #ffdddd;
+            text-decoration: line-through;
+        }
+        .added {
+            background-color: #ddffdd;
+        }
+        .changed-old {
+            background-color: #ffecec;
+            text-decoration: line-through;
+        }
+        .changed-new {
+            background-color: #e6ffec;
+        }
+        .line-number {
+            color: #999;
+            margin-right: 10px;
+            user-select: none;
+        }
+    </style>
+    <div class="diff-container">
+        <div class="diff-column">
+            <h3>Texto Original</h3>
+    """)
     
-    for opcode in differ.get_opcodes():
-        tag, i1, i2, j1, j2 = opcode
-        
+    left_lines = []
+    right_lines = []
+    
+    # Processa cada bloco de diferenças
+    for tag, i1, i2, j1, j2 in matcher.get_opcodes():
         if tag == 'equal':
             for line in text1_lines[i1:i2]:
-                result.append(f"<div style='margin: 5px 0;'>{line}</div>")
-        
-        elif tag == 'replace':
-            ref1 = get_legal_reference(text1_lines[i1]) if i1 < len(text1_lines) else ""
-            ref2 = get_legal_reference(text2_lines[j1]) if j1 < len(text2_lines) else ""
-            ref = ref1 if ref1 else ref2
-            
-            result.append(f"<div style='background-color: #fffacd; margin: 10px 0; padding: 5px;'>"
-                         f"<strong>{ref} foi alterado:</strong>")
-            
-            if i1 < len(text1_lines) and j1 < len(text2_lines):
-                words1 = text1_lines[i1].split()
-                words2 = text2_lines[j1].split()
-                char_diff = difflib.ndiff(words1, words2)
-                
-                line1 = []
-                line2 = []
-                for change in char_diff:
-                    if change.startswith('- '):
-                        line1.append(f"<span style='text-decoration: line-through; color: red;'>{change[2:]}</span>")
-                    elif change.startswith('+ '):
-                        line2.append(f"<span style='text-decoration: underline; color: green;'>{change[2:]}</span>")
-                    elif change.startswith('  '):
-                        line1.append(change[2:])
-                        line2.append(change[2:])
-                
-                if i1 < len(text1_lines):
-                    result.append(f"<div style='color: red;'>Versão anterior: {' '.join(line1)}</div>")
-                if j1 < len(text2_lines):
-                    result.append(f"<div style='color: green;'>Nova versão: {' '.join(line2)}</div>")
-            
-            result.append("</div>")
-        
+                left_lines.append(('unchanged', line))
+                right_lines.append(('unchanged', line))
         elif tag == 'delete':
-            ref = get_legal_reference(text1_lines[i1]) if i1 < len(text1_lines) else f"Linha {i1+1}"
-            result.append(f"<div style='margin: 5px 0;'>"
-                         f"<span style='color: red; text-decoration: line-through;'>{text1_lines[i1] if i1 < len(text1_lines) else ''}</span></div>")
-        
+            for line in text1_lines[i1:i2]:
+                left_lines.append(('deleted', line))
+                right_lines.append(('empty', ''))
         elif tag == 'insert':
-            ref = get_legal_reference(text2_lines[j1]) if j1 < len(text2_lines) else f"Linha {j1+1}"
-            result.append(f"<div style='margin: 5px 0;'>"
-                         f"<span style='color: green; text-decoration: underline;'>{text2_lines[j1] if j1 < len(text2_lines) else ''}</span></div>")
+            for line in text2_lines[j1:j2]:
+                left_lines.append(('empty', ''))
+                right_lines.append(('added', line))
+        elif tag == 'replace':
+            # Para substituições, verifica se podemos mostrar como alteração lado a lado
+            max_len = max(i2-i1, j2-j1)
+            for k in range(max_len):
+                old_line = text1_lines[i1+k] if k < (i2-i1) else ''
+                new_line = text2_lines[j1+k] if k < (j2-j1) else ''
+                
+                if old_line and new_line:
+                    # Faz diff palavra por palavra
+                    d = Differ()
+                    diff = list(d.compare(old_line.split(), new_line.split()))
+                    
+                    old_text = []
+                    new_text = []
+                    
+                    for word in diff:
+                        if word.startswith('- '):
+                            old_text.append(f'<span class="changed-old">{word[2:]}</span>')
+                        elif word.startswith('+ '):
+                            new_text.append(f'<span class="changed-new">{word[2:]}</span>')
+                        elif word.startswith('  '):
+                            old_text.append(word[2:])
+                            new_text.append(word[2:])
+                    
+                    left_lines.append(('changed', ' '.join(old_text)))
+                    right_lines.append(('changed', ' '.join(new_text)))
+                else:
+                    if old_line:
+                        left_lines.append(('deleted', old_line))
+                        right_lines.append(('empty', ''))
+                    if new_line:
+                        left_lines.append(('empty', ''))
+                        right_lines.append(('added', new_line))
     
-    return "".join(result)
+    # Adiciona as linhas do lado esquerdo (original)
+    for i, (line_class, line) in enumerate(left_lines):
+        if line_class == 'empty':
+            result.append(f'<div class="diff-line">&nbsp;</div>')
+        else:
+            result.append(f'<div class="diff-line {line_class}"><span class="line-number">{i+1}</span>{line}</div>')
+    
+    result.append("""
+        </div>
+        <div class="diff-column">
+            <h3>Texto Modificado</h3>
+    """)
+    
+    # Adiciona as linhas do lado direito (modificado)
+    for i, (line_class, line) in enumerate(right_lines):
+        if line_class == 'empty':
+            result.append(f'<div class="diff-line">&nbsp;</div>')
+        else:
+            result.append(f'<div class="diff-line {line_class}"><span class="line-number">{i+1}</span>{line}</div>')
+    
+    result.append("""
+        </div>
+    </div>
+    """)
+    
+    return ''.join(result)
 
 # Função para comparar arquivos Excel
 def compare_excel(file1, file2):
