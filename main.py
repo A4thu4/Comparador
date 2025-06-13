@@ -33,9 +33,33 @@ def get_legal_reference(text):
     return "Texto"
 # Função para comparar textos
 def compare_texts(text1, text2):
-    text1_lines = text1.splitlines()
-    text2_lines = text2.splitlines()
+    text1_lines = [line.strip() for line in text1.splitlines() if line.strip()]
+    text2_lines = [line.strip() for line in text2.splitlines() if line.strip()]
     
+    # Verifica se o texto original está completamente contido no novo texto
+    if len(text2_lines) > len(text1_lines):
+        is_appended = True
+        for i in range(len(text1_lines)):
+            if text1_lines[i] != text2_lines[i]:
+                is_appended = False
+                break
+        
+        if is_appended:
+            result = []
+            # Mostra todo o texto original normalmente
+            for line in text1_lines:
+                result.append(f"<div style='margin: 5px 0;'>{line}</div>")
+            
+            # Mostra o texto adicionado como inserção
+            
+            for line in text2_lines[len(text1_lines):]:
+                ref = get_legal_reference(line)
+                result.append(f"<div style='color: green; margin: 5px 0 5px 0px;'>"
+                            f"<span style='text-decoration: underline;'><span>{line}</div>")
+            
+            return "".join(result)
+    
+    # Se não for um caso de simples acréscimo, usa a comparação normal
     differ = difflib.SequenceMatcher(None, text1_lines, text2_lines)
     result = []
     
@@ -54,13 +78,11 @@ def compare_texts(text1, text2):
             result.append(f"<div style='background-color: #fffacd; margin: 10px 0; padding: 5px;'>"
                          f"<strong>{ref} foi alterado:</strong>")
             
-            # Mostra diferenças entre as palavras (versão linha por linha)
             if i1 < len(text1_lines) and j1 < len(text2_lines):
                 words1 = text1_lines[i1].split()
                 words2 = text2_lines[j1].split()
                 char_diff = difflib.ndiff(words1, words2)
                 
-                # Reconstruir o texto com as diferenças marcadas
                 line1 = []
                 line2 = []
                 for change in char_diff:
@@ -76,17 +98,6 @@ def compare_texts(text1, text2):
                     result.append(f"<div style='color: red;'>Versão anterior: {' '.join(line1)}</div>")
                 if j1 < len(text2_lines):
                     result.append(f"<div style='color: green;'>Nova versão: {' '.join(line2)}</div>")
-                
-                # Adicionando o bloco de alterações detalhadas (novo)
-                char_diff = difflib.ndiff(text1_lines[i1].split(), text2_lines[j1].split())
-                word_changes = [change for change in char_diff if change[0] in ('-', '+')]
-                if word_changes:
-                    result.append("<div style='font-size: 0.9em; margin-top: 5px;'>"
-                                "<strong>Alterações detalhadas:</strong><br>")
-                    for change in word_changes:
-                        color = "red" if change[0] == '-' else "green"
-                        result.append(f"<span style='color: {color}; margin-right: 10px;'>{change}</span>")
-                    result.append("</div>")
             
             result.append("</div>")
         
