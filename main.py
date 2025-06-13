@@ -8,8 +8,8 @@ from openpyxl.styles import PatternFill
 
 
 # Configuração da página
-st.set_page_config(page_title="Comparador de Arquivos GNCP", layout="wide")
-st.title("📊 Comparador de Arquivos e Textos GNCP")
+st.set_page_config(page_title="Comparador de Arquivos 2", layout="wide")
+st.title("📊 Comparador de Arquivos e Textos")
 
 def get_legal_reference(text):
     """Identifica a referência legal no texto"""
@@ -32,6 +32,7 @@ def get_legal_reference(text):
     
     return "Texto"
 # Função para comparar textos
+
 def compare_texts(text1, text2):
     # Divide os textos em linhas
     text1_lines = [line.strip() for line in text1.splitlines() if line.strip()]
@@ -207,7 +208,7 @@ def compare_excel(file1, file2):
     return output, diff_df
 
 # Interface principal
-tab1, tab2 = st.tabs(["Comparar Textos","Comparar Arquivos Excel/CSV"])
+tab1, tab2 = st.tabs([ "Comparar Textos", "Comparar Arquivos Excel/CSV"])
 
 with tab1:
     st.header("Comparador de Textos")
@@ -216,7 +217,7 @@ with tab1:
     with col1:
         txt1 = st.text_area("Texto Original", height=300)
     with col2:
-        txt2 = st.text_area("Texto Novo", height=300)
+        txt2 = st.text_area("Texto Modificado", height=300)
     
     if txt1 and txt2:
         if st.button("Comparar Textos"):
@@ -224,9 +225,9 @@ with tab1:
             st.markdown(comparison, unsafe_allow_html=True)
 
 with tab2:
+    
     st.header("Comparador de Planilhas")
     col1, col2 = st.columns(2)
-    
     with col1:
         arq1 = st.file_uploader("Carregar Arquivo 1", type=["xlsx", "csv"], key="file1")
     with col2:
