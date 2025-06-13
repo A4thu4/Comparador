@@ -54,7 +54,7 @@ def compare_texts(text1, text2):
             result.append(f"<div style='background-color: #fffacd; margin: 10px 0; padding: 5px;'>"
                          f"<strong>{ref} foi alterado:</strong>")
             
-            # Mostra diferenças entre as palavras
+            # Mostra diferenças entre as palavras (versão linha por linha)
             if i1 < len(text1_lines) and j1 < len(text2_lines):
                 words1 = text1_lines[i1].split()
                 words2 = text2_lines[j1].split()
@@ -76,6 +76,17 @@ def compare_texts(text1, text2):
                     result.append(f"<div style='color: red;'>Versão anterior: {' '.join(line1)}</div>")
                 if j1 < len(text2_lines):
                     result.append(f"<div style='color: green;'>Nova versão: {' '.join(line2)}</div>")
+                
+                # Adicionando o bloco de alterações detalhadas (novo)
+                char_diff = difflib.ndiff(text1_lines[i1].split(), text2_lines[j1].split())
+                word_changes = [change for change in char_diff if change[0] in ('-', '+')]
+                if word_changes:
+                    result.append("<div style='font-size: 0.9em; margin-top: 5px;'>"
+                                "<strong>Alterações detalhadas:</strong><br>")
+                    for change in word_changes:
+                        color = "red" if change[0] == '-' else "green"
+                        result.append(f"<span style='color: {color}; margin-right: 10px;'>{change}</span>")
+                    result.append("</div>")
             
             result.append("</div>")
         
