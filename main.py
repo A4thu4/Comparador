@@ -6,9 +6,21 @@ from io import BytesIO
 from openpyxl import Workbook
 from openpyxl.styles import PatternFill
 
+def show_under_development():
+    return """
+    ## 🚧 Comparador de Arquivos - Em Desenvolvimento
+    
+    **Estamos trabalhando nesta funcionalidade!**
+    
+    - Previsão de lançamento: em breve
+    - [ ] Implementar leitura de arquivos
+    - [ ] Criar interface de comparação
+    - [ ] Testes finais
+    """
+
 # Configuração da página
-st.set_page_config(page_title="Comparador de Arquivos", layout="wide")
-st.title("📊 Comparador de Arquivos e Textos")
+st.set_page_config(page_title="Comparador de Arquivos GNCP", layout="wide")
+st.title("📊 Comparador de Arquivos e Textos /n GNCP")
 
 def get_legal_reference(text):
     """Identifica a referência legal no texto"""
@@ -126,33 +138,6 @@ def compare_excel(file1, file2):
 tab1, tab2 = st.tabs(["Comparar Arquivos Excel/CSV", "Comparar Textos"])
 
 with tab1:
-    st.header("Comparador de Planilhas")
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        arq1 = st.file_uploader("Carregar Arquivo 1", type=["xlsx", "csv"], key="file1")
-    with col2:
-        arq2 = st.file_uploader("Carregar Arquivo 2", type=["xlsx", "csv"], key="file2")
-    
-    if arq1 and arq2:
-        if st.button("Comparar Arquivos"):
-            with st.spinner("Processando comparação..."):
-                result, diff_df = compare_excel(arq1, arq2)
-                
-                if result and not diff_df.empty:
-                    st.success("Comparação concluída!")
-                    st.dataframe(diff_df)
-                    
-                    st.download_button(
-                        label="Baixar Excel com Diferenças",
-                        data=result,
-                        file_name="comparacao.xlsx",
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                    )
-                else:
-                    st.info("Os arquivos são idênticos!")
-
-with tab2:
     st.header("Comparador de Textos")
     col1, col2 = st.columns(2)
     
@@ -165,3 +150,31 @@ with tab2:
         if st.button("Comparar Textos"):
             comparison = compare_texts(txt1, txt2)
             st.markdown(comparison, unsafe_allow_html=True)
+
+with tab2:
+    st.header("Comparador de Planilhas")
+    st.markdown(show_under_development())
+    # col1, col2 = st.columns(2)
+    
+    # with col1:
+    #     arq1 = st.file_uploader("Carregar Arquivo 1", type=["xlsx", "csv"], key="file1")
+    # with col2:
+    #     arq2 = st.file_uploader("Carregar Arquivo 2", type=["xlsx", "csv"], key="file2")
+    
+    # if arq1 and arq2:
+    #     if st.button("Comparar Arquivos"):
+    #         with st.spinner("Processando comparação..."):
+    #             result, diff_df = compare_excel(arq1, arq2)
+                
+    #             if result and not diff_df.empty:
+    #                 st.success("Comparação concluída!")
+    #                 st.dataframe(diff_df)
+                    
+    #                 st.download_button(
+    #                     label="Baixar Excel com Diferenças",
+    #                     data=result,
+    #                     file_name="comparacao.xlsx",
+    #                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    #                 )
+    #             else:
+    #                 st.info("Os arquivos são idênticos!")
