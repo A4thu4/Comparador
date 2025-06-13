@@ -9,7 +9,7 @@ from openpyxl.styles import PatternFill
 
 # Configuração da página
 st.set_page_config(page_title="Comparador de Arquivos GNCP", layout="wide")
-st.title("📊 Comparador de Arquivos e Textos /n GNCP")
+st.title("📊 Comparador de Arquivos e Textos GNCP")
 
 def get_legal_reference(text):
     """Identifica a referência legal no texto"""
