@@ -1,4 +1,4 @@
-import difflib
+from difflib import Differ, SequenceMatcher
 import re
 import streamlit as st
 import pandas as pd
