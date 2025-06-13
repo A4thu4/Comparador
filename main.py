@@ -68,6 +68,7 @@ def compare_texts(text1, text2):
         }
         .added {
             background-color: #ddffdd;
+            text-decoration: underline;
         }
         .changed-old {
             background-color: #ff758f;
