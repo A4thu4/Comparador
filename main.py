@@ -67,7 +67,6 @@ def compare_texts(text1, text2):
         }
         .added {
             background-color: #ddffdd;
-            text-decoration: underline;
         }
         .changed-old {
             background-color: #ffecec;
@@ -75,20 +74,11 @@ def compare_texts(text1, text2):
         }
         .changed-new {
             background-color: #e6ffec;
-            text-decoration: underline;
         }
         .line-number {
             color: #999;
             margin-right: 10px;
             user-select: none;
-        }
-        .word-added {
-            background-color: #a0ffa0;
-            text-decoration: underline;
-        }
-        .word-removed {
-            background-color: #ffb6b6;
-            text-decoration: line-through;
         }
     </style>
     <div class="diff-container">
@@ -114,37 +104,48 @@ def compare_texts(text1, text2):
                 left_lines.append(('empty', ''))
                 right_lines.append(('added', line))
         elif tag == 'replace':
-            max_len = max(i2-i1, j2-j1)
-            for k in range(max_len):
-                old_line = text1_lines[i1+k] if k < (i2-i1) else ''
-                new_line = text2_lines[j1+k] if k < (j2-j1) else ''
-                
-                if old_line and new_line:
-                    # Faz diff palavra por palavra com sublinhado
-                    d = Differ()
-                    diff = list(d.compare(old_line.split(), new_line.split()))
+            # Para substituições, primeiro processa as linhas removidas
+            for line in text1_lines[i1:i2]:
+                left_lines.append(('deleted', line))
+                right_lines.append(('empty', ''))
+            
+            # Depois processa as linhas adicionadas
+            for line in text2_lines[j1:j2]:
+                left_lines.append(('empty', ''))
+                right_lines.append(('added', line))
+            
+            # Agora tenta parear linhas similares para mostrar diferenças palavra por palavra
+            # Usa um limiar de similaridade para determinar se vale a pena comparar
+            for old_line in text1_lines[i1:i2]:
+                for new_line in text2_lines[j1:j2]:
+                    # Calcula similaridade entre as linhas
+                    line_matcher = SequenceMatcher(None, old_line, new_line)
+                    similarity = line_matcher.ratio()
                     
-                    old_text = []
-                    new_text = []
-                    
-                    for word in diff:
-                        if word.startswith('- '):
-                            old_text.append(f'<span class="word-removed">{word[2:]}</span>')
-                        elif word.startswith('+ '):
-                            new_text.append(f'<span class="word-added">{word[2:]}</span>')
-                        elif word.startswith('  '):
-                            old_text.append(word[2:])
-                            new_text.append(word[2:])
-                    
-                    left_lines.append(('changed', ' '.join(old_text)))
-                    right_lines.append(('changed', ' '.join(new_text)))
-                else:
-                    if old_line:
-                        left_lines.append(('deleted', old_line))
-                        right_lines.append(('empty', ''))
-                    if new_line:
-                        left_lines.append(('empty', ''))
-                        right_lines.append(('added', new_line))
+                    # Se for suficientemente similar, faz diff palavra por palavra
+                    if similarity > 0.7:  # Ajuste este limiar conforme necessário
+                        d = Differ()
+                        diff = list(d.compare(old_line.split(), new_line.split()))
+                        
+                        old_text = []
+                        new_text = []
+                        
+                        for word in diff:
+                            if word.startswith('- '):
+                                old_text.append(f'<span class="changed-old">{word[2:]}</span>')
+                            elif word.startswith('+ '):
+                                new_text.append(f'<span class="changed-new">{word[2:]}</span>')
+                            elif word.startswith('  '):
+                                old_text.append(word[2:])
+                                new_text.append(word[2:])
+                        
+                        # Substitui as entradas anteriores por esta comparação detalhada
+                        # Precisamos encontrar as posições correspondentes
+                        for idx in range(len(left_lines)):
+                            if left_lines[idx][1] == old_line and right_lines[idx][1] == '':
+                                left_lines[idx] = ('changed', ' '.join(old_text))
+                                right_lines[idx] = ('changed', ' '.join(new_text))
+                                break
     
     # Adiciona as linhas do lado esquerdo (original)
     for i, (line_class, line) in enumerate(left_lines):
