@@ -6,6 +6,10 @@ from io import BytesIO
 from openpyxl import Workbook
 from openpyxl.styles import PatternFill
 
+# Configuração da página
+st.set_page_config(page_title="Comparador GNCP", layout="wide")
+st.title("📊 Comparador de Arquivos e Textos da GNCP")
+
 # Verifica se o arquivo de tema existe
 if not os.path.exists(".streamlit/config.toml"):
     st.error("Arquivo de tema não encontrado! Crie em: .streamlit/config.toml")
@@ -50,9 +54,7 @@ else:
         unsafe_allow_html=True
     )
 
-# Configuração da página
-st.set_page_config(page_title="Comparador GNCP", layout="wide")
-st.title("📊 Comparador de Arquivos e Textos da GNCP")
+
 
 # Função para comparar textos
 def compare_texts(text1, text2):
