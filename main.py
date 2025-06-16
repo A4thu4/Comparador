@@ -34,7 +34,7 @@ else:
             .stTextArea>div>div>textarea,
             .stSelectbox>div>div>select,
             .stDateInput>div>div>input {
-                background-color: #e0e3e8 !important;  /* Cinza claro */
+                background-color: #F3F3F3 !important;  /* Cinza claro */
                 border-radius: 8px !important;
             }
 
