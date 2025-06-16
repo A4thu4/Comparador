@@ -11,26 +11,6 @@ from openpyxl.styles import PatternFill
 st.set_page_config(page_title="Comparador de Arquivos 2", layout="wide")
 st.title("📊 Comparador de Arquivos e Textos")
 
-def get_legal_reference(text):
-    """Identifica a referência legal no texto"""
-    text = text.strip()
-    
-    # Padrões para identificar elementos jurídicos
-    patterns = [
-        (r'^(Art\. \d+°)', 'Artigo'),
-        (r'^(§ \d+°)', 'Parágrafo'),
-        (r'^(§ único)', 'Parágrafo único'),
-        (r'^(INCISO [A-Z]+)', 'Inciso'),
-        (r'^([a-z]\) )', 'Alínea'),
-        (r'^(\d+\. )', 'Item')
-    ]
-    
-    for pattern, ref_type in patterns:
-        match = re.search(pattern, text, re.IGNORECASE)
-        if match:
-            return f"{ref_type} {match.group(1)}"
-    
-    return "Texto"
 # Função para comparar textos
 def compare_texts(text1, text2):
     # Divide os textos em linhas
