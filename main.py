@@ -8,8 +8,8 @@ from openpyxl.styles import PatternFill
 
 
 # Configuração da página
-st.set_page_config(page_title="Comparador da GNCP", layout="wide")
-st.title("📊 Comparador de Arquivos e Textos GNCP")
+st.set_page_config(page_title="Comparador de Arquivos 2", layout="wide")
+st.title("📊 Comparador de Arquivos e Textos")
 
 def get_legal_reference(text):
     """Identifica a referência legal no texto"""
@@ -32,9 +32,6 @@ def get_legal_reference(text):
     
     return "Texto"
 # Função para comparar textos
-
-from difflib import SequenceMatcher, Differ
-
 def compare_texts(text1, text2):
     # Divide os textos em linhas
     text1_lines = [line.strip() for line in text1.splitlines() if line.strip()]
