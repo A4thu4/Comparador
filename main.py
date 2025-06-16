@@ -22,28 +22,25 @@ else:
         """
         <style>
             :root {
-                --primary-color: #1bb50b !important;
-                --background-color: #FFFFFF !important;
-                --secondary-background-color: #e0e3e8 !important;
-                --text-color: #000000 !important;
+                --primary-color: #1bb50b !important;  /* Verde */
+                --background-color: #FFFFFF !important;  /* Branco */
+                --secondary-background-color: #FFFFFF !important;  /* Branco */
+                --text-color: #000000 !important;  /* Preto */
             }
-            
-            /* Garante que o tema seja aplicado em todos os elementos */
-            .stApp, .stApp header, .stApp footer {
-                --primary-color: #1bb50b !important;
-                --background-color: #FFFFFF !important;
-                --secondary-background-color: #e0e3e8 !important;
-                --text-color: #000000 !important;
+
+            /* Aplica cinza SOMENTE nos inputs */
+            .stTextInput>div>div>input,
+            .stNumberInput>div>div>input,
+            .stTextArea>div>div>textarea,
+            .stSelectbox>div>div>select,
+            .stDateInput>div>div>input {
+                background-color: #e0e3e8 !important;  /* Cinza claro */
+                border-radius: 8px !important;
             }
-            
-            /* Ajustes específicos para componentes */
-            .st-bb, .st-at, .st-ae {
-                background-color: var(--secondary-background-color) !important;
-            }
-            
-            .stTextInput>div>div>input, .stNumberInput>div>div>input,
-            .stTextArea>div>div>textarea {
-                background-color: var(--secondary-background-color) !important;
+
+            /* Mantém fundo branco em outros containers */
+            .stApp, .stSidebar, .stAlert, .stMarkdown {
+                background-color: #FFFFFF !important;
             }
         </style>
         """,
