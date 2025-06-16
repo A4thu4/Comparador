@@ -1,15 +1,58 @@
 from difflib import Differ, SequenceMatcher
-import re
+import os
 import streamlit as st
 import pandas as pd
 from io import BytesIO
 from openpyxl import Workbook
 from openpyxl.styles import PatternFill
 
+# Verifica se o arquivo de tema existe
+if not os.path.exists(".streamlit/config.toml"):
+    st.error("Arquivo de tema não encontrado! Crie em: .streamlit/config.toml")
+else:
+    # Configurações da página que devem vir primeiro
+    st.set_page_config(
+        page_title="Seu App",
+        layout="wide",
+        initial_sidebar_state="expanded"
+    )
+    
+    # CSS customizado para forçar o tema
+    st.markdown(
+        """
+        <style>
+            :root {
+                --primary-color: #1bb50b !important;
+                --background-color: #FFFFFF !important;
+                --secondary-background-color: #e0e3e8 !important;
+                --text-color: #000000 !important;
+            }
+            
+            /* Garante que o tema seja aplicado em todos os elementos */
+            .stApp, .stApp header, .stApp footer {
+                --primary-color: #1bb50b !important;
+                --background-color: #FFFFFF !important;
+                --secondary-background-color: #e0e3e8 !important;
+                --text-color: #000000 !important;
+            }
+            
+            /* Ajustes específicos para componentes */
+            .st-bb, .st-at, .st-ae {
+                background-color: var(--secondary-background-color) !important;
+            }
+            
+            .stTextInput>div>div>input, .stNumberInput>div>div>input,
+            .stTextArea>div>div>textarea {
+                background-color: var(--secondary-background-color) !important;
+            }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
 
 # Configuração da página
-st.set_page_config(page_title="Comparador de Arquivos 2", layout="wide")
-st.title("📊 Comparador de Arquivos e Textos")
+st.set_page_config(page_title="Comparador GNCP", layout="wide")
+st.title("📊 Comparador de Arquivos e Textos da GNCP")
 
 # Função para comparar textos
 def compare_texts(text1, text2):
