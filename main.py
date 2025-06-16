@@ -61,6 +61,11 @@ def compare_texts(text1, text2):
             margin: 2px 0;
             padding: 2px;
         }
+        .diff-cell {
+            flex: 1;
+            padding: 2px 10px;
+            white-space: pre-wrap;
+        }
         .unchanged {
             background-color: #f8f8f8;
         }
@@ -96,50 +101,59 @@ def compare_texts(text1, text2):
     
     # Processa cada bloco de diferenças
     for tag, i1, i2, j1, j2 in matcher.get_opcodes():
+
         if tag == 'equal':
             for line in text1_lines[i1:i2]:
                 left_lines.append(('unchanged', line))
                 right_lines.append(('unchanged', line))
+
         elif tag == 'delete':
             for line in text1_lines[i1:i2]:
                 left_lines.append(('deleted', line))
                 right_lines.append(('empty', ''))
+
         elif tag == 'insert':
             for line in text2_lines[j1:j2]:
-                left_lines.append(('empty', ''))
-                right_lines.append(('added', line))
+                if left_lines and left_lines[-1][0] == 'empty':
+                    right_lines[-1] = ('added', line)
+                else:
+                    left_lines.append(('empty',''))
+                    right_lines.append(('added',line))
+
         elif tag == 'replace':
-            # Primeiro tenta encontrar pares similares para diff palavra por palavra
             matched_pairs = []
-            
-            # Para cada linha no bloco antigo
+            used_new = set()
+            used_old = set()
+            # Pareamento linha a linha
             for i, old_line in enumerate(text1_lines[i1:i2]):
                 best_match = None
-                best_ratio = 0.7  # Limiar de similaridade
-                
-                # Procura a linha mais similar no bloco novo
+                best_ratio = 0.8
                 for j, new_line in enumerate(text2_lines[j1:j2]):
-                    if j in [pair[1] for pair in matched_pairs]:
-                        continue  # Já foi pareada
-                    
-                    matcher = SequenceMatcher(None, old_line, new_line)
-                    ratio = matcher.ratio()
-                    
+                    if j in used_new:
+                        continue
+                    ratio = SequenceMatcher(None, old_line, new_line).ratio()
                     if ratio > best_ratio:
                         best_ratio = ratio
-                        best_match = (i, j, new_line)
-                
-                if best_match:
-                    matched_pairs.append((i, best_match[1]))
-                    _, _, new_line = best_match
-                    
-                    # Faz diff palavra por palavra
+                        best_match = j
+                if best_match is not None:
+                    matched_pairs.append((i, best_match))
+                    used_new.add(best_match)
+                    used_old.add(i)
+
+            # Agora percorre ambos os blocos na ordem original
+            old_idx, new_idx = 0, 0
+            len_old = i2 - i1
+            len_new = j2 - j1
+            while old_idx < len_old or new_idx < len_new:
+                # Se ambos são pareados
+                pair = next(((oi, nj) for oi, nj in matched_pairs if oi == old_idx and nj == new_idx), None)
+                if pair:
+                    old_line = text1_lines[i1 + old_idx]
+                    new_line = text2_lines[j1 + new_idx]
                     d = Differ()
                     diff = list(d.compare(old_line.split(), new_line.split()))
-                    
                     old_text = []
                     new_text = []
-                    
                     for word in diff:
                         if word.startswith('- '):
                             old_text.append(f'<span class="changed-old">{word[2:]}</span>')
@@ -148,21 +162,22 @@ def compare_texts(text1, text2):
                         elif word.startswith('  '):
                             old_text.append(word[2:])
                             new_text.append(word[2:])
-                    
                     left_lines.append(('changed', ' '.join(old_text)))
                     right_lines.append(('changed', ' '.join(new_text)))
-            
-            # Processa linhas não pareadas como removidas/adicionadas
-            for i, old_line in enumerate(text1_lines[i1:i2]):
-                if i not in [pair[0] for pair in matched_pairs]:
-                    left_lines.append(('deleted', old_line))
+                    old_idx += 1
+                    new_idx += 1
+                elif old_idx < len_old and old_idx not in used_old:
+                    left_lines.append(('deleted', text1_lines[i1 + old_idx]))
                     right_lines.append(('empty', ''))
-            
-            for j, new_line in enumerate(text2_lines[j1:j2]):
-                if j not in [pair[1] for pair in matched_pairs]:
+                    old_idx += 1
+                elif new_idx < len_new and new_idx not in used_new:
                     left_lines.append(('empty', ''))
-                    right_lines.append(('added', new_line))
-    
+                    right_lines.append(('added', text2_lines[j1 + new_idx]))
+                    new_idx += 1
+                else:
+                    old_idx += 1
+                    new_idx += 1
+
     # Adiciona as linhas do lado esquerdo (original)
     for i, (line_class, line) in enumerate(left_lines):
         if line_class == 'empty':
