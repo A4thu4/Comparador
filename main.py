@@ -271,7 +271,7 @@ with tab1:
 
 with tab2:
     
-    st.header("Comparar Arquivos")
+    st.header("Comparar Arquivos/Documentos")
     col1, col2 = st.columns(2)
     with col1:
         arq1 = st.file_uploader("Carregar Arquivo 1", type=["doc", "pdf", "txt", "csv"], key="file1")
