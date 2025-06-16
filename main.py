@@ -253,10 +253,10 @@ def compare_excel(file1, file2):
     return output, diff_df
 
 # Interface principal
-tab1, tab2 = st.tabs([ "Comparar Textos", "Comparar Arquivos Excel/CSV"])
+tab1, tab2, tab3 = st.tabs([ "Comparar Textos", "Comparar Arquivos", "Comparar Planilhas Excel"])
 
 with tab1:
-    st.header("Comparador de Textos")
+    st.header("Comparar Textos")
     col1, col2 = st.columns(2)
     
     with col1:
@@ -271,12 +271,12 @@ with tab1:
 
 with tab2:
     
-    st.header("Comparador de Planilhas")
+    st.header("Comparar Arquivos")
     col1, col2 = st.columns(2)
     with col1:
-        arq1 = st.file_uploader("Carregar Arquivo 1", type=["xlsx", "csv"], key="file1")
+        arq1 = st.file_uploader("Carregar Arquivo 1", type=["doc", "pdf", "txt", "csv"], key="file1")
     with col2:
-        arq2 = st.file_uploader("Carregar Arquivo 2", type=["xlsx", "csv"], key="file2")
+        arq2 = st.file_uploader("Carregar Arquivo 2", type=["doc", "pdf", "txt", "csv"], key="file2")
     
     if arq1 and arq2:
         if st.button("Comparar Arquivos"):
@@ -295,3 +295,11 @@ with tab2:
                     )
                 else:
                     st.info("Os arquivos são idênticos!")
+
+with tab3:
+    st.header("Comparar Planihas")
+    col1, col2 = st.columns(2)
+    with col1:
+        sheet1 = st.file_uploader("Carregar Arquivo 1", type=["xlsx"], key="wb1")
+    with col2:
+        sheet2 = st.file_uploader("Carregar Arquivo 2", type=["xlsx"], key="wb2")
