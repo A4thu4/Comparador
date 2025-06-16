@@ -253,7 +253,7 @@ def compare_excel(file1, file2):
     return output, diff_df
 
 # Interface principal
-tab1, tab2, tab3 = st.tabs([ "Comparar Textos", "Comparar Arquivos/Documentos", "Comparar Planilhas Excel"])
+tab1, tab2, tab3 = st.tabs([ "Comparar Textos", "Comparar Documentos", "Comparar Planilhas Excel"])
 
 with tab1:
     st.header("Comparar Textos")
@@ -271,7 +271,7 @@ with tab1:
 
 with tab2:
     
-    st.header("Comparar Arquivos/Documentos")
+    st.header("Comparar Documentos")
     col1, col2 = st.columns(2)
     with col1:
         arq1 = st.file_uploader("Carregar Documento 1", type=["doc", "pdf", "txt", "csv"], key="file1")
