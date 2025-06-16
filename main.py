@@ -253,7 +253,7 @@ def compare_excel(file1, file2):
     return output, diff_df
 
 # Interface principal
-tab1, tab2, tab3 = st.tabs([ "Comparar Textos", "Comparar Arquivos", "Comparar Planilhas Excel"])
+tab1, tab2, tab3 = st.tabs([ "Comparar Textos", "Comparar Arquivos/Documentos", "Comparar Planilhas Excel"])
 
 with tab1:
     st.header("Comparar Textos")
