@@ -6,20 +6,16 @@ from io import BytesIO
 from openpyxl import Workbook
 from openpyxl.styles import PatternFill
 
-# Configuração da página
-st.set_page_config(page_title="Comparador GNCP", layout="wide")
-st.title("📊 Comparador de Arquivos e Textos da GNCP")
+
 
 # Verifica se o arquivo de tema existe
 if not os.path.exists(".streamlit/config.toml"):
     st.error("Arquivo de tema não encontrado! Crie em: .streamlit/config.toml")
 else:
-    # Configurações da página que devem vir primeiro
-    st.set_page_config(
-        page_title="Seu App",
-        layout="wide",
-        initial_sidebar_state="expanded"
-    )
+    
+    # Configuração da página
+    st.set_page_config(page_title="Comparador GNCP", layout="wide")
+    st.title("📊 Comparador de Arquivos e Textos da GNCP")
     
     # CSS customizado para forçar o tema
     st.markdown(
