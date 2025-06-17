@@ -73,6 +73,7 @@ def compare_texts(text1, text2):
             white-space: pre-wrap;
             margin: 2px 0;
             padding: 2px;
+            border-left: 4px solid transparent;
         }
         .diff-cell {
             flex: 1;
@@ -85,10 +86,12 @@ def compare_texts(text1, text2):
         .deleted {
             background-color: #ffdddd;
             text-decoration: line-through;
+            border-left: 4px solid #ff6f6f;
         }
         .added {
             background-color: #ddffdd;
             text-decoration: underline;
+            border-left: 4px solid #4fe87b;
         }
         .changed-old {
             background-color: #ff758f;
@@ -102,6 +105,8 @@ def compare_texts(text1, text2):
             color: #999;
             margin-right: 10px;
             user-select: none;
+            width: 20px;
+            display: inline-block;
         }
     </style>
     <div class="diff-container">
@@ -194,7 +199,7 @@ def compare_texts(text1, text2):
     # Adiciona as linhas do lado esquerdo (original)
     for i, (line_class, line) in enumerate(left_lines):
         if line_class == 'empty':
-            result.append(f'<div class="diff-line">&nbsp;</div>')
+            result.append(f'<div class="diff-line empty"><span class="line-number">{i+1}</span>&nbsp;</div>')
         else:
             result.append(f'<div class="diff-line {line_class}"><span class="line-number">{i+1}</span>{line}</div>')
     
@@ -207,7 +212,7 @@ def compare_texts(text1, text2):
     # Adiciona as linhas do lado direito (modificado)
     for i, (line_class, line) in enumerate(right_lines):
         if line_class == 'empty':
-            result.append(f'<div class="diff-line">&nbsp;</div>')
+            result.append(f'<div class="diff-line empty"><span class="line-number">{i+1}</span>&nbsp;</div>')
         else:
             result.append(f'<div class="diff-line {line_class}"><span class="line-number">{i+1}</span>{line}</div>')
     
