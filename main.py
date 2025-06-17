@@ -6,8 +6,6 @@ from io import BytesIO
 from openpyxl import Workbook
 from openpyxl.styles import PatternFill
 
-
-
 # Verifica se o arquivo de tema existe
 if not os.path.exists(".streamlit/config.toml"):
     st.error("Arquivo de tema não encontrado! Crie em: .streamlit/config.toml")
@@ -46,8 +44,6 @@ else:
         """,
         unsafe_allow_html=True
     )
-
-
 
 # Função para comparar textos
 def compare_texts(text1, text2):
@@ -280,8 +276,6 @@ with tab2:
     # with col2:
     #     arq2 = st.file_uploader("Carregar Documento 2", type=["doc", "pdf", "txt", "csv"], key="file2")
     
-    
-
 with tab3:
     st.header("Comparar Planihas")
     st.markdown(" EM DESENVOLVIMENTO")
