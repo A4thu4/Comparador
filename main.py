@@ -6,6 +6,7 @@ from io import BytesIO
 from openpyxl import Workbook
 from openpyxl.styles import PatternFill
 
+
 # Verifica se o arquivo de tema existe
 if not os.path.exists(".streamlit/config.toml"):
     st.error("Arquivo de tema não encontrado! Crie em: .streamlit/config.toml")
@@ -13,7 +14,8 @@ else:
     
     # Configuração da página
     st.set_page_config(page_title="📊 Comparador GNCP", layout="wide")
-    st.title("Comparador de Arquivos e Textos da GNCP")
+    st.title("Gerência de Normas e Critérios de Produtividade - GNCP")
+    st.subheader("Comparador de Arquivos e Textos da GNCP")
     
     # CSS customizado para forçar o tema
     st.markdown(
@@ -252,7 +254,6 @@ def compare_excel(file1, file2):
 tab1, tab2, tab3 = st.tabs([ "Comparar Textos", "Comparar Documentos", "Comparar Planilhas Excel"])
 
 with tab1:
-    st.header("Comparar Textos")
     col1, col2 = st.columns(2)
     
     with col1:
@@ -266,9 +267,7 @@ with tab1:
             st.markdown(comparison, unsafe_allow_html=True)
 
 with tab2:
-    
-    st.header("Comparar Documentos")
-    st.markdown(" EM DESENVOLVIMENTO")
+    st.title(" EM DESENVOLVIMENTO")
 
     # col1, col2 = st.columns(2)
     # with col1:
@@ -277,8 +276,7 @@ with tab2:
     #     arq2 = st.file_uploader("Carregar Documento 2", type=["doc", "pdf", "txt", "csv"], key="file2")
     
 with tab3:
-    st.header("Comparar Planihas")
-    st.markdown(" EM DESENVOLVIMENTO")
+    st.title(" EM DESENVOLVIMENTO")
 
     # col1, col2 = st.columns(2)
     # with col1:
