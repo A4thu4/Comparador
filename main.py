@@ -14,8 +14,27 @@ else:
     
     # Configuração da página
     st.set_page_config(page_title="📊 Comparador GNCP", layout="wide")
-    st.title("Gerência de Normas e Critérios de Produtividade - GNCP")
-    st.subheader("Comparador de Arquivos e Textos")
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        st.image("Logomarca SEAD 2.png", width=800)
+
+    st.markdown("""
+        <style>
+            img {
+                margin-top: -3rem !important;
+                margin-bottom: -1.2rem !important;
+                align: center !important;
+            }
+            h1 {
+                font-size: 2.12rem !important;
+                margin-bottom: 1rem !important;
+                margin-left: 1.6rem !important;
+            }
+        </style>
+    """, unsafe_allow_html=True)
+
+    st.markdown("<h1 style='text-align: center;'>Comparador de Arquivos e Textos da GNCP</h1>", unsafe_allow_html=True)
+
     
     # CSS customizado para forçar o tema
     st.markdown(
