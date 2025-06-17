@@ -12,8 +12,8 @@ if not os.path.exists(".streamlit/config.toml"):
 else:
     
     # Configuração da página
-    st.set_page_config(page_title="Comparador GNCP", layout="wide")
-    st.title("📊 Comparador de Arquivos e Textos da GNCP")
+    st.set_page_config(page_title="📊 Comparador GNCP", layout="wide")
+    st.title("Comparador de Arquivos e Textos da GNCP")
     
     # CSS customizado para forçar o tema
     st.markdown(
