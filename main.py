@@ -260,15 +260,25 @@ tab1, tab2, tab3 = st.tabs([ "Comparar Textos", "Comparar Documentos", "Comparar
 
 with tab1:
     col1, col2 = st.columns(2)
-    
+
+    if "txt1" not in st.session_state:
+        st.session_state.txt1 = ""
+    if "txt2" not in st.session_state:
+        st.session_state.txt2 = ""
+    if  st.session_state.txt1 and  st.session_state.txt2:
+        if st.button("Apagar Textos"):
+            st.session_state.txt1 = ""
+            st.session_state.txt2 = ""
+            st.rerun()
+
     with col1:
-        txt1 = st.text_area("Texto Original", height=300)
+        st.session_state.txt1 = st.text_area("Texto Original", value=st.session_state.txt1, key="txt1_input",  height=300)
     with col2:
-        txt2 = st.text_area("Texto Modificado", height=300)
+        st.session_state.txt2 = st.text_area("Texto Modificado", value=st.session_state.txt2, key="txt2_input", height=300)
     
-    if txt1 and txt2:
+    if  st.session_state.txt1 and  st.session_state.txt2:
         if st.button("Comparar Textos"):
-            comparison = compare_texts(txt1, txt2)
+            comparison = compare_texts( st.session_state.txt1,  st.session_state.txt2)
             st.markdown(comparison, unsafe_allow_html=True)
 
 with tab2:
