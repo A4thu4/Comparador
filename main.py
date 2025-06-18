@@ -1,11 +1,10 @@
-from difflib import Differ, SequenceMatcher
-import os
 import streamlit as st
 import pandas as pd
-from io import BytesIO
+from difflib import Differ, SequenceMatcher
 from openpyxl import Workbook
 from openpyxl.styles import PatternFill
-
+from io import BytesIO
+import os
 
 # Verifica se o arquivo de tema existe
 if not os.path.exists(".streamlit/config.toml"):
@@ -299,6 +298,13 @@ with tab1:
         if st.button("Comparar Textos"):
             comparison = compare_texts( st.session_state.txt1,  st.session_state.txt2)
             st.markdown(comparison, unsafe_allow_html=True)
+
+            st.download_button(
+            label="Baixar Comparação em HTML",
+            data=comparison.encode("utf-8"),
+            file_name="comparacao.html",
+            mime="text/html"
+        )
 
 with tab2:
     st.title(" EM DESENVOLVIMENTO")
