@@ -127,7 +127,7 @@ def compare_texts(text1, text2):
         }
         .line-number {
             color: #999;
-            margin-right: 10px;
+            margin-right: 5px;
             user-select: none;
             width: 20px;
             display: inline-block;
