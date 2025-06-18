@@ -82,10 +82,16 @@ def compare_texts(text1, text2):
             display: flex;
             width: 100%;
             font-family: monospace;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            overflow: hidden;
         }
         .diff-column {
             flex: 1;
             padding: 10px;
+            margin: 0;
+            border-right: 1px solid #eee;
+            background: #fff;
         }
         .diff-line {
             white-space: pre-wrap;
@@ -302,7 +308,7 @@ with tab1:
             st.download_button(
                 label="Baixar Comparação",
                 data=comparison.encode("utf-8"),
-                file_name="Arquivos Comparados.html",
+                file_name="Textos Comparados.html",
                 mime="text/html"
         )
 
