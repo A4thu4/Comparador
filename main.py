@@ -300,9 +300,9 @@ with tab1:
             st.markdown(comparison, unsafe_allow_html=True)
 
             st.download_button(
-                label="Baixar Comparação em HTML",
+                label="Baixar Comparação",
                 data=comparison.encode("utf-8"),
-                file_name="comparacao.html",
+                file_name="Arquivos Comparados.html",
                 mime="text/html"
         )
 
