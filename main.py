@@ -289,28 +289,35 @@ with tab1:
         st.session_state.txt1 = ""
     if "txt2" not in st.session_state:
         st.session_state.txt2 = ""
-    if  st.session_state.txt1 and  st.session_state.txt2:
-        if st.button("Apagar Textos"):
-            st.session_state.txt1 = ""
-            st.session_state.txt2 = ""
-            st.rerun()
+    
 
     with col1:
         st.session_state.txt1 = st.text_area("Texto Original", value=st.session_state.txt1, key="txt1_input",  height=300)
     with col2:
         st.session_state.txt2 = st.text_area("Texto Modificado", value=st.session_state.txt2, key="txt2_input", height=300)
     
+    btn_col1, btn_col2 = st.columns([1, 1])
+    with btn_col1:
+        comparar = st.button("Comparar Textos")
+    with btn_col2:
+        apagar = st.button("Apagar Textos")
+
     if  st.session_state.txt1 and  st.session_state.txt2:
-        if st.button("Comparar Textos"):
+        if comparar:
             comparison = compare_texts( st.session_state.txt1,  st.session_state.txt2)
             st.markdown(comparison, unsafe_allow_html=True)
-
+            
             st.download_button(
-                label="Baixar Comparação",
-                data=comparison.encode("utf-8"),
-                file_name="Textos Comparados.html",
-                mime="text/html"
+            label="Baixar Comparação",
+            data=comparison.encode("utf-8"),
+            file_name="Textos Comparados.html",
+            mime="text/html"
         )
+            
+        elif apagar:
+            st.session_state.txt1 = ""
+            st.session_state.txt2 = ""
+            st.rerun()
 
 with tab2:
     st.title(" EM DESENVOLVIMENTO")
