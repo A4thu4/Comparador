@@ -302,7 +302,7 @@ with tab1:
         with btn_col1:
             comparar = st.button("Comparar Textos")
         with btn_col2:
-            apagar = st.button("Apagar Textos")
+            apagar = st.button("Limpar Textos")
             
         if comparar:
             comparison = compare_texts( st.session_state.txt1,  st.session_state.txt2)
