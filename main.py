@@ -85,6 +85,8 @@ def compare_texts(text1, text2):
             border: 1px solid #ddd;
             border-radius: 6px;
             overflow: hidden;
+            max-height: 80vh; 
+            overflow-y: auto;
         }
         .diff-column {
             flex: 1;
@@ -290,14 +292,11 @@ with tab1:
     if "txt2" not in st.session_state:
         st.session_state.txt2 = ""
     
-
     with col1:
         st.session_state.txt1 = st.text_area("Texto Original", value=st.session_state.txt1, key="txt1_input",  height=300)
     with col2:
         st.session_state.txt2 = st.text_area("Texto Modificado", value=st.session_state.txt2, key="txt2_input", height=300)
     
-    
-
     if  st.session_state.txt1 and  st.session_state.txt2:
         btn_col1, btn_col2 = st.columns([1, 1])
         with btn_col1:
