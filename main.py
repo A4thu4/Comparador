@@ -296,13 +296,15 @@ with tab1:
     with col2:
         st.session_state.txt2 = st.text_area("Texto Modificado", value=st.session_state.txt2, key="txt2_input", height=300)
     
-    btn_col1, btn_col2 = st.columns([1, 1])
-    with btn_col1:
-        comparar = st.button("Comparar Textos")
-    with btn_col2:
-        apagar = st.button("Apagar Textos")
+    
 
     if  st.session_state.txt1 and  st.session_state.txt2:
+        btn_col1, btn_col2 = st.columns([1, 1])
+        with btn_col1:
+            comparar = st.button("Comparar Textos")
+        with btn_col2:
+            apagar = st.button("Apagar Textos")
+            
         if comparar:
             comparison = compare_texts( st.session_state.txt1,  st.session_state.txt2)
             st.markdown(comparison, unsafe_allow_html=True)
@@ -314,7 +316,7 @@ with tab1:
             mime="text/html"
         )
             
-        elif apagar:
+        if apagar:
             st.session_state.txt1 = ""
             st.session_state.txt2 = ""
             st.rerun()
