@@ -91,6 +91,7 @@ def compare_texts(text1, text2):
             overflow: hidden;
             max-height: 80vh; 
             overflow-y: auto;
+            overflow-x: auto;
         }
         .diff-column {
             width: 50%;
@@ -413,6 +414,7 @@ def compare_docs(doc1, doc2):
             overflow: hidden;
             max-height: 80vh; 
             overflow-y: auto;
+            overflow-x: auto;
         }
         .diff-column {
             width: 50%;
