@@ -93,11 +93,19 @@ def compare_texts(text1, text2):
             overflow-y: auto;
         }
         .diff-column {
-            flex: 1;
+            width: 50%;
+            min-width: 0;
+            max-width: 50%;
             padding: 10px;
             margin: 0;
             border-right: 1px solid #eee;
             background: #fff;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+        }
+        .diff-column:last-child {
+            border-right: none;
         }
         .diff-line {
             white-space: pre-wrap;
@@ -407,11 +415,19 @@ def compare_docs(doc1, doc2):
             overflow-y: auto;
         }
         .diff-column {
-            flex: 1;
+            width: 50%;
+            min-width: 0;
+            max-width: 50%;
             padding: 10px;
             margin: 0;
             border-right: 1px solid #eee;
             background: #fff;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+        }
+        .diff-column:last-child {
+            border-right: none;
         }
         .diff-line {
             white-space: pre-wrap;
