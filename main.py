@@ -848,7 +848,7 @@ with tab3:
         with btn_col1:
             comparar = st.button("Comparar Planilhas")
         with btn_col2:
-            limpar = st.button("Limpar Uploads")
+            limpar = st.button("Limpar Arquivos")
 
         # Verificar se os arquivos são os mesmos
         if st.session_state.file1.name == st.session_state.file2.name:
