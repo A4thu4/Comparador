@@ -628,7 +628,7 @@ def compare_docs(doc1, doc2):
     
     return ''.join(result), diff_df, False
 
-# Função para comparar arquivos Excel
+# Função para comparar planilhas Excel
 def compare_excel(file1, file2, selected_sheet=None):
     try:
         xls1 = pd.ExcelFile(file1)
