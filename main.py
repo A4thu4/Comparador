@@ -628,7 +628,7 @@ def compare_docs(doc1, doc2):
     
     return ''.join(result), diff_df, False
 
-# Funções para comparar planilhas Excel
+# Função para comparar arquivos Excel
 def compare_excel(file1, file2, selected_sheet=None):
     try:
         xls1 = pd.ExcelFile(file1)
@@ -819,62 +819,4 @@ with tab2:
             st.rerun()
     
 with tab3:
-    col1, col2 = st.columns(2)
-
-    if "file_reset" not in st.session_state:
-        st.session_state.file_reset = 0
-    
-    with col1:
-        st.session_state.file1 = st.file_uploader("Carregar Arquivo 1", accept_multiple_files=False, type=["xlsx"], key=f"wb1{st.session_state.file_reset}")
-    with col2:
-        st.session_state.file2 = st.file_uploader("Carregar Arquivo 2", accept_multiple_files=False, type=["xlsx"], key=f"wb2{st.session_state.file_reset}")
-        
-    if st.session_state.file1 and st.session_state.file2:
-        btn_col1, btn_col2 = st.columns([1, 1])
-        with btn_col1:
-            comparar = st.button("Comparar Planilhas")
-        with btn_col2:
-            limpar = st.button("Limpar Uploads")
-
-        # Verificar se os arquivos são os mesmos
-        if st.session_state.file1.name == st.session_state.file2.name:
-            st.warning("Você carregou o mesmo arquivo duas vezes!")
-        # Verificar se os arquivos são idênticos   
-        elif excel_equal(st.session_state.file1, st.session_state.file2):
-            st.warning("Os arquivos são idênticos!")
-
-        else:
-            try:
-                xls1 = pd.ExcelFile(st.session_state.file1)
-                xls2 = pd.ExcelFile(st.session_state.file2)
-                all_sheets = sorted(set(xls1.sheet_names) | set(xls2.sheet_names))
-                if len(all_sheets) > 1:
-                    selected_sheet = st.selectbox(
-                        "Selecione a aba para comparar:",
-                        options= all_sheets,
-                        index=0
-                    )
-                    compare_all = (selected_sheet == "Todas as abas")
-                else:
-                    compare_all = False
-                    selected_sheet = all_sheets[0] if all_sheets else None
-                if comparar:
-                    with st.spinner("Comparando arquivos..."):
-                        result = compare_excel(st.session_state.file1, st.session_state.file2, selected_sheet)
-                        if result:
-                            styled1, styled2 = result
-                            st.markdown(f"**Arquivo 1: `{selected_sheet}`**")
-                            st.dataframe(styled1, use_container_width=True, height=600)
-
-                            st.divider()
-
-                            st.markdown(f"**Arquivo 2: `{selected_sheet}`**")
-                            st.dataframe(styled2, use_container_width=True, height=600)
-                elif limpar:
-                    st.session_state.file1 = None
-                    st.session_state.file2 = None
-                    st.session_state.file_reset += 1  # incrementa para forçar reset dos file_uploaders
-                    st.rerun()
-
-            except Exception as e:
-                st.error(f"Erro ao processar arquivos: {e}")
+    st.title(" EM DESENVOLVIMENTO")
