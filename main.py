@@ -789,9 +789,9 @@ with tab2:
     if st.session_state.arq1 and st.session_state.arq2:
         btn_col1, btn_col2 = st.columns([1, 1])
         with btn_col1:
-            comparar = st.button("Comparar Documentos")
+            comparar = st.button("Comparar Documentos", key="comparar_docs")
         with btn_col2:
-            limpar = st.button("Limpar Uploads")
+            limpar = st.button("Limpar Uploads", key="limpar_docs")
 
         text1 = st.session_state.arq1.name.split('.')[-1].lower()
         text2 = st.session_state.arq2.name.split('.')[-1].lower()
@@ -846,9 +846,9 @@ with tab3:
     if st.session_state.file1 and st.session_state.file2:
         btn_col1, btn_col2 = st.columns([1, 1])
         with btn_col1:
-            comparar = st.button("Comparar Planilhas")
+            comparar = st.button("Comparar Planilhas", key="comparar_excel")
         with btn_col2:
-            limpar = st.button("Limpar Arquivos")
+            limpar = st.button("Limpar Uploads", key="limpar_excel")
 
         # Verificar se os arquivos são os mesmos
         if st.session_state.file1.name == st.session_state.file2.name:
