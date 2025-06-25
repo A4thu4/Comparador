@@ -825,19 +825,10 @@ with tab3:
         st.session_state.file_reset = 0
     
     with col1:
-        st.session_state.arq1 = st.file_uploader(
-            "Carregar Documento 1",
-            type=["doc", "docx", "pdf", "txt", "csv"],
-            accept_multiple_files=False,
-            key=f"file1_input_{st.session_state.file_reset}"
-        )
+        st.session_state.file1 = st.file_uploader("Carregar Arquivo 1", accept_multiple_files=False, type=["xlsx"], key=f"wb1{st.session_state.file_reset}")
     with col2:
-        st.session_state.arq2 = st.file_uploader(
-            "Carregar Documento 2",
-            type=["doc", "docx", "pdf", "txt", "csv"],
-            accept_multiple_files=False,
-            key=f"file2_input_{st.session_state.file_reset}"
-        )        
+        st.session_state.file2 = st.file_uploader("Carregar Arquivo 2", accept_multiple_files=False, type=["xlsx"], key=f"wb2{st.session_state.file_reset}")
+        
     if st.session_state.file1 and st.session_state.file2:
         btn_col1, btn_col2 = st.columns([1, 1])
         with btn_col1:
