@@ -13,64 +13,52 @@ from openpyxl import Workbook
 from openpyxl.styles import PatternFill
 
 def main():
-    # Verifica se o arquivo de tema existe
-    if not os.path.exists(".streamlit/config.toml"):
-        st.error("Arquivo de tema não encontrado! Crie em: .streamlit/config.toml")
-    # Configuração da página
-    else:
-        st.set_page_config(page_title="📊 Comparador GNCP", layout="wide")
-        col1, col2, col3 = st.columns([1, 2, 1])
-        with col2:
-            st.image("Logomarca SEAD 2.png", width=800)
-
-        st.markdown("""
-            <style>
-                img {
-                    margin-top: -3rem !important;
-                    margin-bottom: -1.2rem !important;
-                    align: center !important;
-                }
-                h1 {
-                    font-size: 2.12rem !important;
-                    margin-bottom: 1rem !important;
-                    margin-left: 1.6rem !important;
-                }
-            </style>
-        """, unsafe_allow_html=True)
-
-        st.markdown("<h1 style='text-align: center;'>Comparador de Arquivos e Textos da GNCP</h1>", unsafe_allow_html=True)
+# Configuração da página
+    st.set_page_config(page_title="📊 Comparador GNCP", page_icon="Brasão.png", layout="wide")
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        st.image("Logomarca SEAD 2.png", width=800)
         
-        # CSS customizado para forçar o tema
-        st.markdown(
-            """
-            <style>
-                :root {
-                    --primary-color: #1bb50b !important;  /* Verde */
-                    --background-color: #FFFFFF !important;  /* Branco */
-                    --secondary-background-color: #FFFFFF !important;  /* Branco */
-                    --text-color: #000000 !important;  /* Preto */
-                }
+# CSS customizado para forçar o tema
+    st.markdown(
+        """
+        <style>
+            img {
+                margin-top: -3rem !important;
+                margin-bottom: -1.2rem !important;
+                align: center !important;
+            }
+            h1 {
+                font-size: 2.12rem !important;
+                margin-bottom: 1rem !important;
+                margin-left: 1.6rem !important;
+            }
+            :root {
+                --primary-color: #1bb50b !important;  /* Verde */
+                --background-color: #FFFFFF !important;  /* Branco */
+                --secondary-background-color: #FFFFFF !important;  /* Branco */
+                --text-color: #000000 !important;  /* Preto */
+            }
 
-                /* Aplica cinza SOMENTE nos inputs */
-                .stTextInput>div>div>input,
-                .stNumberInput>div>div>input,
-                .stTextArea>div>div>textarea,
-                .stSelectbox>div>div>select,
-                .stDateInput>div>div>input {
-                    background-color: #F3F3F3 !important;  /* Cinza claro */
-                    border-radius: 8px !important;
-                }
+            /* Aplica cinza SOMENTE nos inputs */
+            .stTextInput>div>div>input,
+            .stNumberInput>div>div>input,
+            .stTextArea>div>div>textarea,
+            .stSelectbox>div>div>select,
+            .stDateInput>div>div>input {
+                background-color: #F3F3F3 !important;  /* Cinza claro */
+                border-radius: 8px !important;
+            }
 
-                /* Mantém fundo branco em outros containers */
-                .stApp, .stSidebar, .stAlert, .stMarkdown {
-                    background-color: #FFFFFF !important;
-                }
-            </style>
-            """,
-            unsafe_allow_html=True
-        )
+            /* Mantém fundo branco em outros containers */
+            .stApp, .stSidebar, .stAlert, .stMarkdown {
+                background-color: #FFFFFF !important;
+            }
+        </style>
+        """,unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center;'>Comparador de Arquivos e Textos da GNCP</h1>", unsafe_allow_html=True)
 
-    # Função para comparar textos
+# Função para comparar textos
     def compare_texts(text1, text2):
         # Divide os textos em linhas
         text1_lines = [line.strip() for line in text1.splitlines() if line.strip()]
@@ -263,7 +251,7 @@ def main():
         
         return ''.join(result)
 
-    # Funções para comparar arquivos 
+# Funções para comparar arquivos 
     def extract_text(file):
         """Extrai e padroniza texto de diferentes formatos de arquivo"""
         if not file:
@@ -629,7 +617,7 @@ def main():
         
         return ''.join(result), diff_df, False
 
-    # Função para comparar planilhas Excel
+# Funções para comparar planilhas Excel
     def compare_excel(file1, file2, selected_sheet=None):
         try:
             xls1 = pd.ExcelFile(file1)
@@ -726,7 +714,7 @@ def main():
                 return False
         return True
 
-    # Interface principal
+# Interface principal
     tab1, tab2, tab3 = st.tabs([ "Comparar Textos", "Comparar Documentos", "Comparar Planilhas Excel"])
 
     with tab1:
