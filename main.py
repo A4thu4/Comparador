@@ -811,7 +811,7 @@ def main():
                 st.rerun()
 
     with tab3:
-        st.title("EM DESENVOLVIMENTO ")
+        st.title("EM DESENVOLVIMENTO")
         # col1, col2 = st.columns(2)
 
         # if "file_reset" not in st.session_state:
