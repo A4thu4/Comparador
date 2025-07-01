@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
 from io import BytesIO
 import os
 # Comparar Textos
@@ -19,7 +20,7 @@ def main():
     with col2:
         st.image("Logomarca SEAD 2.png", width=800)
         
-# CSS customizado para forçar o tema
+# CSS customizado 
     st.markdown(
         """
         <style>
@@ -53,6 +54,72 @@ def main():
             /* Mantém fundo branco em outros containers */
             .stApp, .stSidebar, .stAlert, .stMarkdown {
                 background-color: #FFFFFF !important;
+            }
+
+            /* Estilo para botões */
+            .stButton > button {
+                border-radius: 8px !important;
+                border: 1px solid #e0e0e0 !important;
+                transition: all 0.3s ease !important;
+                font-weight: 500 !important;
+                color: #ff666f !important;
+            }
+
+            .stButton > button:hover {
+                background: linear-gradient(135deg, #FFF, #FFF) !important;
+                color: #ff666f !important; /* texto verde */
+                border: 2px solid #ff666f !important; /* borda verde */
+                box-shadow: 0 2px 8px rgba(27,181,11,0.15) !important; /* sombra suave */
+                transform: translateY(-2px) scale(1.03) !important; /* leve efeito de elevação */
+                transition: all 0.2s !important;
+            }
+
+            /* Estilo para botões primários e de Download*/
+            .stButton > button[kind="primary"],
+            .stDownloadButton > button {
+                background: linear-gradient(135deg, #FFF, #FFF) !important;
+                border-radius: 10px !important;
+                color: green !important;
+            }
+            .stButton > button[kind="primary"]:hover,
+            .stDownloadButton > button:hover {
+                background: linear-gradient(135deg, #FFF, #FFF) !important;
+                color: #1bb50b !important; /* texto verde */
+                border: 2px solid #1bb50b !important; /* borda verde */
+                box-shadow: 0 2px 8px rgba(27,181,11,0.15) !important; /* sombra suave */
+                transform: translateY(-2px) scale(1.03) !important; /* leve efeito de elevação */
+                transition: all 0.2s !important;
+            }
+
+            /* Estilo para DataFrames */
+            .stDataFrame {
+                border-radius: 8px !important;
+                border: 1px solid #e0e0e0 !important;
+                overflow: hidden !important;
+            }
+
+            /* Estilo para as abas */
+            .stTabs [data-baseweb="tab-list"] {
+                gap: 10px;
+            }
+            
+            /* Linha da aba ativa */
+            div[data-baseweb="tab-highlight"] {
+                background-color: #1bb50b; 
+            }
+            .stTabs [aria-selected="false"] {
+                color: #000000 !important;
+            }
+            .stTabs [aria-selected="true"] {
+                color: #1bb50b !important;
+            }
+
+            /* Estilo para file uploader */
+            .stFileUploader {
+                border: 2px dashed #e0e0e0 !important;
+                border-radius: 8px !important;
+                padding: 8px !important;
+                text-align: center !important;
             }
         </style>
         """,unsafe_allow_html=True)
@@ -626,6 +693,14 @@ def main():
             st.error(f"Erro ao ler arquivos: {e}")
             return None
 
+        # Padroniza nomes das abas
+        sheets1 = set(s.strip().lower() for s in xls1.sheet_names)
+        sheets2 = set(s.strip().lower() for s in xls2.sheet_names)
+
+        if sheets1 != sheets2:
+            st.warning(f"Os arquivos não possuem as mesmas abas.\n")
+            return None
+        
         # Determinar quais abas comparar
         all_sheets = sorted(set(xls1.sheet_names) | set(xls2.sheet_names))
         
@@ -644,53 +719,288 @@ def main():
             df1 = xls1.parse(sheet) if sheet in xls1.sheet_names else pd.DataFrame()
             df2 = xls2.parse(sheet) if sheet in xls2.sheet_names else pd.DataFrame()
 
-            # Garantir alinhamento
+            # Remover índices e resetar
             df1 = df1.reset_index(drop=True)
             df2 = df2.reset_index(drop=True)
-            max_rows = max(len(df1), len(df2))
-            all_cols = df1.columns.union(df2.columns)
-            df1 = df1.reindex(index=range(max_rows), columns=all_cols)
-            df2 = df2.reindex(index=range(max_rows), columns=all_cols)
-
-            # Função de estilização
-            def highlight_diff(val1, val2):
-                if pd.isna(val1) and pd.isna(val2):
-                    return ""
-                if pd.isna(val1):
-                    return "background-color: #FFCCCC"  # Adicionado (verde claro)
-                if pd.isna(val2):
-                    return "background-color: #CCFFCC"  # Removido (vermelho claro)
-                if val1 != val2:
-                    return "background-color: #FFFF99"  # Alterado (amarelo)
-                return ""
-
-            # Aplicar estilização
-            style1 = df1.copy()
-            style2 = df2.copy()
-            for col in all_cols:
-                for i in range(max_rows):
-                    v1 = df1.at[i, col]
-                    v2 = df2.at[i, col]
-                    style1.at[i, col] = highlight_diff(v2, v1)
-                    style2.at[i, col] = highlight_diff(v2, v1)
-
-            # Criar DataFrames estilizados
-            styled_df1 = df1.style.apply(
-                lambda col: style1[col.name] if col.name in style1.columns else [""]*len(df1), 
-                axis=0
-            )
-            styled_df2 = df2.style.apply(
-                lambda col: style2[col.name] if col.name in style2.columns else [""]*len(df2), 
-                axis=0
-            )
             
-            results[sheet] = (styled_df1, styled_df2)
+            # Garantir que as colunas sejam as mesmas
+            all_cols = list(df1.columns.union(df2.columns))
+            df1 = df1.reindex(columns=all_cols)
+            df2 = df2.reindex(columns=all_cols)
+            
+            # Usar algoritmo inteligente de comparação de linhas
+            comparison_result = smart_row_comparison(df1, df2, all_cols)
+            
+            results[sheet] = comparison_result
         
         return results if not selected_sheet else results.get(selected_sheet)
 
-    def excel_equal(file1, file2):
-        import pandas as pd
+    def smart_row_comparison(df1, df2, all_cols):
+        """
+        Algoritmo inteligente que detecta inserções, deleções e alterações reais
+        sem marcar linhas deslocadas como alteradas
+        """
+        from difflib import SequenceMatcher
+        
+        # Converter linhas para strings para comparação
+        def row_to_string(row):
+            return '|'.join([str(val) if pd.notna(val) else 'NaN' for val in row])
+        
+        # Criar listas de strings representando cada linha
+        rows1 = [row_to_string(df1.iloc[i]) for i in range(len(df1))]
+        rows2 = [row_to_string(df2.iloc[i]) for i in range(len(df2))]
+        
+        # Usar SequenceMatcher para detectar operações (igual, inserir, deletar, substituir)
+        matcher = SequenceMatcher(None, rows1, rows2)
+        
+        # Preparar DataFrames de resultado
+        max_rows = max(len(df1), len(df2))
+        result_df1 = pd.DataFrame(index=range(max_rows), columns=all_cols)
+        result_df2 = pd.DataFrame(index=range(max_rows), columns=all_cols)
+        
+        # Preparar DataFrames de estilo
+        style_df1 = pd.DataFrame('', index=range(max_rows), columns=all_cols)
+        style_df2 = pd.DataFrame('', index=range(max_rows), columns=all_cols)
+        
+        # Contadores para estatísticas
+        changes_count = 0
+        additions_count = 0
+        deletions_count = 0
+        
+        current_row = 0
+        
+        # Processar cada operação do SequenceMatcher
+        for tag, i1, i2, j1, j2 in matcher.get_opcodes():
+            if tag == 'equal':
+                # Linhas iguais - copiar sem marcação
+                for i, (idx1, idx2) in enumerate(zip(range(i1, i2), range(j1, j2))):
+                    row_idx = current_row + i
+                    result_df1.iloc[row_idx] = df1.iloc[idx1]
+                    result_df2.iloc[row_idx] = df2.iloc[idx2]
+                    # Sem estilo especial para linhas iguais
+                current_row += (i2 - i1)
+            
+            elif tag == 'delete':
+                # Linhas deletadas - aparecem apenas no arquivo 1
+                for i, idx1 in enumerate(range(i1, i2)):
+                    row_idx = current_row + i
+                    result_df1.iloc[row_idx] = df1.iloc[idx1]
+                    # Linha vazia no arquivo 2
+                    for col in all_cols:
+                        style_df1.iloc[row_idx, style_df1.columns.get_loc(col)] = "background-color: #f8d7da; border-left: 4px solid #dc3545;"
+                        style_df2.iloc[row_idx, style_df2.columns.get_loc(col)] = "background-color: #e0e0e9; border-left: 4px solid #6c757d;"
+                    deletions_count += 1
+                current_row += (i2 - i1)
+                
+            elif tag == 'insert':
+                # Linhas inseridas - aparecem apenas no arquivo 2
+                for i, idx2 in enumerate(range(j1, j2)):
+                    row_idx = current_row + i
+                    result_df2.iloc[row_idx] = df2.iloc[idx2]
+                    # Linha vazia no arquivo 1
+                    for col in all_cols:
+                        style_df1.iloc[row_idx, style_df1.columns.get_loc(col)] = "background-color: #e0e0e9; border-left: 4px solid #6c757d;"
+                        style_df2.iloc[row_idx, style_df2.columns.get_loc(col)] = "background-color: #d4edda; border-left: 4px solid #28a745;"
+                    additions_count += 1
+                current_row += (j2 - j1)
+                
+            elif tag == 'replace':
+                # Linhas substituídas - comparar célula por célula
+                max_replace_rows = max((i2 - i1), (j2 - j1))
+                
+                for i in range(max_replace_rows):
+                    row_idx = current_row + i
+                    
+                    # Obter linhas para comparação
+                    row1 = df1.iloc[i1 + i] if i < (i2 - i1) else pd.Series([None] * len(all_cols), index=all_cols)
+                    row2 = df2.iloc[j1 + i] if i < (j2 - j1) else pd.Series([None] * len(all_cols), index=all_cols)
+                    
+                    result_df1.iloc[row_idx] = row1
+                    result_df2.iloc[row_idx] = row2
+                    
+                    # Comparar célula por célula para destacar diferenças específicas
+                    for col in all_cols:
+                        val1 = row1[col] if col in row1.index else None
+                        val2 = row2[col] if col in row2.index else None
+                        
+                        col_idx1 = style_df1.columns.get_loc(col)
+                        col_idx2 = style_df2.columns.get_loc(col)
+                        
+                        if pd.isna(val1) and pd.isna(val2):
+                            # Ambos são NaN - sem estilo
+                            continue
+                        elif pd.isna(val1) and not pd.isna(val2):
+                            # Valor adicionado
+                            style_df1.iloc[row_idx, col_idx1] = "background-color: #e0e0e9; border-left: 4px solid #6c757d;"
+                            style_df2.iloc[row_idx, col_idx2] = "background-color: #d4edda; border-left: 4px solid #28a745;"
+                            additions_count += 1
+                        elif not pd.isna(val1) and pd.isna(val2):
+                            # Valor removido
+                            style_df1.iloc[row_idx, col_idx1] = "background-color: #f8d7da; border-left: 4px solid #dc3545;"
+                            style_df2.iloc[row_idx, col_idx2] = "background-color: #e0e0e9; border-left: 4px solid #6c757d;"
+                            deletions_count += 1
+                        elif str(val1) != str(val2):
+                            # Valor alterado
+                            style_df1.iloc[row_idx, col_idx1] = "background-color: #ffff99; border-left: 4px solid #ffc107;"
+                            style_df2.iloc[row_idx, col_idx2] = "background-color: #ffff99; border-left: 4px solid #ffc107;"
+                            changes_count += 1
+                
+                current_row += max_replace_rows
+        
+        # Aplicar estilos aos DataFrames
+        styled_df1 = result_df1.style.apply(
+            lambda col: style_df1[col.name] if col.name in style_df1.columns else [''] * len(result_df1), 
+            axis=0
+        )
+        styled_df2 = result_df2.style.apply(
+            lambda col: style_df2[col.name] if col.name in style_df2.columns else [''] * len(result_df2), 
+            axis=0
+        )
+        
+        # Calcular estatísticas
+        stats = {
+            'changes': changes_count,
+            'additions': additions_count,
+            'deletions': deletions_count,
+            'total_cells': len(all_cols) * max_rows
+        }
+        
+        return (styled_df1, styled_df2, stats)
 
+    def display_excel_comparison(result, sheet_name, file1_name, file2_name):
+        """Exibe a comparação do Excel com estilo profissional tipo diffchecker"""
+        if len(result) == 3:
+            styled_df1, styled_df2, stats = result
+        else:
+            styled_df1, styled_df2 = result
+            stats = {'changes': 0, 'additions': 0, 'deletions': 0, 'total_cells': 0}
+        
+        # Legenda
+        st.markdown("""
+        <div style="background-color: #F3F3F3; padding: 15px; border-radius: 8px; margin: 15px 0;">
+            <h5 style="margin-top: 0; color: #333;">Legenda:</h5>
+            <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 5px;">
+                    <div style="width: 20px; height: 20px; background-color: #ffff99; border-left: 4px solid #ffc107; border-radius: 3px;"></div>
+                    <span>Alterados</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 5px;">
+                    <div style="width: 20px; height: 20px; background-color: #d4edda; border-left: 4px solid #28a745; border-radius: 3px;"></div>
+                    <span>Adicionados</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 5px;">
+                    <div style="width: 20px; height: 20px; background-color: #f8d7da; border-left: 4px solid #dc3545; border-radius: 3px;"></div>
+                    <span>Removidos</span>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Comparação lado a lado
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown(f"""
+            <div style="background-color: #F3F3F3; padding: 10px; border-radius: 5px; margin-bottom: 10px;">
+                <h4 style="margin: 0;">{file1_name}</h4>
+                <small>Aba: {sheet_name}</small>
+            </div>
+            """, unsafe_allow_html=True)
+            st.dataframe(styled_df1, use_container_width=True, height=600)
+        # st.divider()
+        with col2:
+            st.markdown(f"""
+            <div style="background-color: #F3F3F3; padding: 10px; border-radius: 5px; margin-bottom: 10px;">
+                <h4 style="margin: 0;">{file2_name}</h4>
+                <small>Aba: {sheet_name}</small>
+            </div>
+            """, unsafe_allow_html=True)
+            st.dataframe(styled_df2, use_container_width=True, height=600)
+        
+        # Botão de download
+        if stats['changes'] + stats['additions'] + stats['deletions'] > 0:
+            # Gerar relatório HTML para download
+            html_report = generate_excel_report(styled_df1, styled_df2, stats, sheet_name, file1_name, file2_name)
+            st.download_button(
+                label="Baixar Comparação",
+                data=html_report.encode("utf-8"),
+                file_name=f"Comparacao_Excel_{sheet_name}.html",
+                mime="text/html",
+                type="secondary"
+            )
+
+    def generate_excel_report(styled_df1, styled_df2, stats, sheet_name, file1_name, file2_name):
+        """Gera relatório HTML da comparação para download"""
+        html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Relatório de Comparação Excel - {sheet_name}</title>
+            <meta charset="utf-8">
+            <style>
+                body {{ font-family: Arial, sans-serif; margin: 20px; }}
+                .header {{ background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; }}
+                .stats {{ display: flex; gap: 20px; margin: 15px 0; }}
+                .stat {{ background: white; padding: 15px; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }}
+                .legend {{ background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0; }}
+                .comparison {{ display: flex; gap: 20px; }}
+                .file-section {{ flex: 1; }}
+                .file-header {{ background-color: #e3f2fd; padding: 10px; border-radius: 5px; margin-bottom: 10px; }}
+                table {{ width: 100%; border-collapse: collapse; margin: 10px 0; }}
+                th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
+                th {{ background-color: #f5f5f5; }}
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>📊 Relatório da Comparação </h1>
+                <p><strong>Arquivos:</strong> {file1_name} // {file2_name}</p>
+                <p><strong>Aba:</strong> {sheet_name}</p>
+            </div>
+            
+            <div class="stats">
+                <div class="stat">
+                    <h3>🔄 Alterações</h3>
+                    <p style="font-size: 24px; margin: 0;">{stats['changes']}</p>
+                </div>
+                <div class="stat">
+                    <h3>➕ Adições</h3>
+                    <p style="font-size: 24px; margin: 0;">{stats['additions']}</p>
+                </div>
+                <div class="stat">
+                    <h3>➖ Remoções</h3>
+                    <p style="font-size: 24px; margin: 0;">{stats['deletions']}</p>
+                </div>
+            </div>
+            
+            <div class="legend">
+                <h3>Legenda das Cores:</h3>
+                <p>• <span style="background-color: #fff3cd; padding: 2px 8px; border-left: 4px solid #ffc107;">Valores alterados</span></p>
+                <p>• <span style="background-color: #d4edda; padding: 2px 8px; border-left: 4px solid #28a745;">Valores adicionados</span></p>
+                <p>• <span style="background-color: #f8d7da; padding: 2px 8px; border-left: 4px solid #dc3545;">Valores removidos</span></p>
+            </div>
+            
+            <div class="comparison">
+                <div class="file-section">
+                    <div class="file-header">
+                        <h3>{file1_name}</h3>
+                    </div>
+                    {styled_df1.to_html()}
+                </div>
+                
+                <div class="file-section">
+                    <div class="file-header">
+                        <h3>{file2_name}</h3>
+                    </div>
+                    {styled_df2.to_html()}
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        return html
+
+    def excel_equal(file1, file2):
         try:
             xls1 = pd.ExcelFile(file1)
             xls2 = pd.ExcelFile(file2)
@@ -726,14 +1036,26 @@ def main():
             st.session_state.txt2 = ""
         
         with col1:
-            st.session_state.txt1 = st.text_area("Texto Original", value=st.session_state.txt1, key="txt1_input",  height=300)
+            st.session_state.txt1 = st.text_area(
+                "Texto Original", 
+                value=st.session_state.txt1, 
+                key="txt1_input",  
+                height=300,
+                help="Digite ou cole o texto original para ser comparado"
+            )
         with col2:
-            st.session_state.txt2 = st.text_area("Texto Modificado", value=st.session_state.txt2, key="txt2_input", height=300)
+            st.session_state.txt2 = st.text_area(
+                "Texto Modificado", 
+                value=st.session_state.txt2, 
+                key="txt2_input", 
+                height=300,
+                help="Digite ou cole o texto alterado para ser comparado"
+            )
         
         if  st.session_state.txt1 and  st.session_state.txt2:
             btn_col1, btn_col2 = st.columns([1, 1])
             with btn_col1:
-                comparar = st.button("Comparar Textos")
+                comparar = st.button("Comparar Textos", type="primary")
             with btn_col2:
                 apagar = st.button("Limpar Textos")
                 
@@ -765,20 +1087,22 @@ def main():
                 "Carregar Documento 1",
                 type=["doc", "docx", "pdf", "txt", "csv"],
                 accept_multiple_files=False,
-                key=f"file1_input_{st.session_state.arq_reset}"
+                key=f"file1_input_{st.session_state.arq_reset}",
+                help="Carregar primeiro arquivo para comparação"
             )
         with col2:
             st.session_state.arq2 = st.file_uploader(
                 "Carregar Documento 2",
                 type=["doc", "docx", "pdf", "txt", "csv"],
                 accept_multiple_files=False,
-                key=f"file2_input_{st.session_state.arq_reset}"
+                key=f"file2_input_{st.session_state.arq_reset}",
+                help="Carregar segundo arquivo para comparação"
             )
 
         if st.session_state.arq1 and st.session_state.arq2:
             btn_col1, btn_col2 = st.columns([1, 1])
             with btn_col1:
-                comparar = st.button("Comparar Documentos", key="comparar_docs")
+                comparar = st.button("Comparar Documentos", key="comparar_docs", type="primary")
             with btn_col2:
                 limpar = st.button("Limpar Uploads", key="limpar_docs")
 
@@ -811,78 +1135,75 @@ def main():
                 st.rerun()
 
     with tab3:
-        st.title("EM DESENVOLVIMENTO")
-        # col1, col2 = st.columns(2)
+        # st.title("EM DESENVOLVIMENTO")
+        col1, col2 = st.columns(2)
 
-        # if "file_reset" not in st.session_state:
-        #     st.session_state.file_reset = 0
+        if "file_reset" not in st.session_state:
+            st.session_state.file_reset = 0
         
-        # with col1:
-        #     st.session_state.file1 = st.file_uploader(
-        #         "Carregar Arquivo 1", 
-        #         type=["xlsx"],
-        #         accept_multiple_files=False, 
-        #         key=f"wb1_{st.session_state.file_reset}"
-                        
-        #         )
-        # with col2:
-        #     st.session_state.file2 = st.file_uploader(
-        #         "Carregar Arquivo 2", 
-        #         type=["xlsx"],
-        #         accept_multiple_files=False, 
-        #         key=f"wb2_{st.session_state.file_reset}"
-        #         )
+        with col1:
+            st.session_state.file1 = st.file_uploader(
+                "Carregar Arquivo Excel 1", 
+                type=["xlsx", "xls"],
+                accept_multiple_files=False, 
+                key=f"wb1_{st.session_state.file_reset}",
+                help="Carregar primeira planilha para comparação"
+            )
+        with col2:
+            st.session_state.file2 = st.file_uploader(
+                "Carregar Arquivo Excel 2", 
+                type=["xlsx", "xls"],
+                accept_multiple_files=False, 
+                key=f"wb2_{st.session_state.file_reset}",
+                help="Carregar segunda planilha para comparação"
+            )
             
-        # if st.session_state.file1 and st.session_state.file2:
-        #     btn_col1, btn_col2 = st.columns([1, 1])
-        #     with btn_col1:
-        #         comparar = st.button("Comparar Planilhas", key="comparar_excel")
-        #     with btn_col2:
-        #         limpar = st.button("Limpar Uploads", key="limpar_excel")
-
-        #     # Verificar se os arquivos são os mesmos
-        #     if st.session_state.file1.name == st.session_state.file2.name:
-        #         st.warning("Você carregou o mesmo arquivo duas vezes!")
-        #     # Verificar se os arquivos são idênticos   
-        #     elif excel_equal(st.session_state.file1, st.session_state.file2):
-        #         st.warning("Os arquivos são idênticos!")
-
-        #     else:
-        #         try:
-        #             xls1 = pd.ExcelFile(st.session_state.file1)
-        #             xls2 = pd.ExcelFile(st.session_state.file2)
-        #             all_sheets = sorted(set(xls1.sheet_names) | set(xls2.sheet_names))
-        #             if len(all_sheets) > 1:
-        #                 selected_sheet = st.selectbox(
-        #                     "Selecione a aba para comparar:",
-        #                     options= all_sheets,
-        #                     index=0
-        #                 )
-        #                 compare_all = (selected_sheet == "Todas as abas")
-        #             else:
-        #                 compare_all = False
-        #                 selected_sheet = all_sheets[0] if all_sheets else None
+        if st.session_state.file1 and st.session_state.file2:
+            # Verificar se os arquivos são os mesmos
+            if st.session_state.file1.name == st.session_state.file2.name:
+                st.warning("Você carregou o mesmo arquivo duas vezes!")
+            # Verificar se os arquivos são idênticos   
+            elif excel_equal(st.session_state.file1, st.session_state.file2):
+                st.success("Os arquivos são idênticos!")
+            else:
+                try:
+                    xls1 = pd.ExcelFile(st.session_state.file1)
+                    xls2 = pd.ExcelFile(st.session_state.file2)
+                    all_sheets = sorted(set(xls1.sheet_names) | set(xls2.sheet_names))
+                    
+                    # Seleção de aba
+                    if len(all_sheets) > 1:
+                        selected_sheet = st.selectbox(
+                            "Selecione a aba para comparar:",
+                            options=all_sheets,
+                            index=0,
+                            help="Escolha qual aba/planilha deseja comparar"
+                        )
+                    else:
+                        selected_sheet = all_sheets[0] if all_sheets else None
+                        st.info(f"Comparando aba: **{selected_sheet}**")
+                    
+                    btn_col1, btn_col2 = st.columns([1, 1])
+                    with btn_col1:
+                        comparar = st.button("Comparar Planilhas", key="comparar_excel", type="primary")
+                    with btn_col2:
+                        limpar = st.button("Limpar Uploads", key="limpar_excel")
                         
-        #             if comparar:
-        #                 with st.spinner("Comparando arquivos..."):
-        #                     result = compare_excel(st.session_state.file1, st.session_state.file2, selected_sheet)
-        #                     if result:
-        #                         styled1, styled2 = result
-        #                         st.markdown(f"**Arquivo 1: `{selected_sheet}`**")
-        #                         st.dataframe(styled1, use_container_width=True, height=600)
+                    if comparar:
+                        with st.spinner("Comparando arquivos..."):
+                            result = compare_excel(st.session_state.file1, st.session_state.file2, selected_sheet)
+                            if result:
+                                display_excel_comparison(result, selected_sheet, st.session_state.file1.name, st.session_state.file2.name)
+                                
+                    elif limpar:
+                        st.session_state.file1 = None
+                        st.session_state.file2 = None
+                        st.session_state.file_reset += 1
+                        st.rerun()
 
-        #                         st.divider()
-
-        #                         st.markdown(f"**Arquivo 2: `{selected_sheet}`**")
-        #                         st.dataframe(styled2, use_container_width=True, height=600)
-        #             elif limpar:
-        #                 st.session_state.file1 = None
-        #                 st.session_state.file2 = None
-        #                 st.session_state.file_reset += 1  # incrementa para forçar reset dos file_uploaders
-        #                 st.rerun()
-
-        #         except Exception as e:
-        #             st.error(f"Erro ao processar arquivos: {e}")
+                except Exception as e:
+                    st.error(f"Erro ao processar arquivos: {e}")
+                    st.info("Verifique se os arquivos são válidos e não estão corrompidos.")
 
 if __name__ == "__main__":
     main()
