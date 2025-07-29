@@ -1025,7 +1025,7 @@ def excel_equal(file1, file2):
 
 def main():
 # Configuração da página
-    st.set_page_config(page_title="comp3", page_icon="Brasão.png", layout="wide")
+    st.set_page_config(page_title="Comparador GNCP", page_icon="Brasão.png", layout="wide")
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         st.image("Logomarca SEAD 2.png", width=800)
