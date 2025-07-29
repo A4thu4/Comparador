@@ -2,17 +2,17 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from io import BytesIO
-import os, re
+import os
 # Comparar Textos
 from difflib import Differ, SequenceMatcher 
 # Comparar Documentos
 from PyPDF2 import PdfReader, PdfWriter 
-import pdfplumber
 import docx
 import chardet 
 #Comparar Excel
 from openpyxl import Workbook 
 from openpyxl.styles import PatternFill
+
 
 # Função para comparar textos
 def compare_texts(text1, text2):
@@ -208,73 +208,6 @@ def compare_texts(text1, text2):
     return ''.join(result)
 
 # Funções para comparar arquivos 
-def is_footer_row(row):
-    """Retorna True se a linha parece ser rodapé."""
-    if not row or all((cell is None or str(cell).strip() == "") for cell in row):
-        return True  # Linha vazia
-    row_str = " ".join([str(cell) for cell in row if cell is not None]).strip()
-    # Ajuste os padrões conforme necessário para seu caso
-    footer_patterns = [
-        r"portaria sead", r"sei \d+", r"p[áa]g\.\s*\d+", r"n[úu]mero", r"processo", r"^none$", r"^$", r"^página",
-        r"^.*documento.*$", r"^.*secretaria.*$", r"^.*governo.*$", r"^.*cnpj.*$"
-    ]
-    for pat in footer_patterns:
-        if re.search(pat, row_str, re.IGNORECASE):
-            return True
-    
-    return False
-
-def extract_tables_from_pdf(file):
-    def make_unique(seq):
-        seen = {}
-        result = []
-        for item in seq:
-            if item not in seen:
-                seen[item] = 0
-                result.append(item)
-            else:
-                seen[item] += 1
-                result.append(f"{item}_{seen[item]}")
-        return result
-
-    full_table = []
-    header = None
-    with pdfplumber.open(file) as pdf:
-        for page in pdf.pages:
-            tables_on_page = page.extract_tables()
-            for table in tables_on_page:
-                if table:
-                    # Só remove rodapé se estiver na última linha
-                    filtered_table = table.copy()
-                    while filtered_table and is_footer_row(filtered_table[-1]):
-                        filtered_table = filtered_table[:-1]
-                    if not filtered_table:
-                        continue
-                    if not header:
-                        header = filtered_table[0]
-                        full_table.extend(filtered_table[1:])
-                    else:
-                        if filtered_table[0] == header:
-                            full_table.extend(filtered_table[1:])
-                        else:
-                            full_table.extend(filtered_table)
-    if header and full_table:
-        unique_header = make_unique(header)
-        return [pd.DataFrame(full_table, columns=unique_header)]
-    else:
-        return []
-
-def extract_tables_from_docx(file):
-    doc = docx.Document(file)
-    tables = []
-    for table in doc.tables:
-        data = []
-        for row in table.rows:
-            data.append([cell.text.strip() for cell in row.cells])
-        df = pd.DataFrame(data)
-        tables.append(df)
-    return tables
-
 def extract_text(file):
     """Extrai e padroniza texto de diferentes formatos de arquivo"""
     if not file:
@@ -413,7 +346,7 @@ def compare_docs(doc1, doc2):
     # Usa SequenceMatcher para alinhar as linhas
     matcher = SequenceMatcher(None, text1_lines, text2_lines)
     
-    # Prepara o resultado em HTML 
+    # Prepara o resultado em HTML (mesmo estilo anterior)
     result = []
     result.append("""
     <style>
@@ -640,16 +573,6 @@ def compare_docs(doc1, doc2):
     
     return ''.join(result), diff_df, False
 
-def compare_table_list(tables1, tables2):
-    results = []
-    for i in range(max(len(tables1), len(tables2))):
-        df1 = tables1[i] if i < len(tables1) else pd.DataFrame()
-        df2 = tables2[i] if i < len(tables2) else pd.DataFrame()
-        all_cols = list(df1.columns.union(df2.columns)) if not df1.empty and not df2.empty else []
-        result = smart_row_comparison(df1, df2, all_cols)
-        results.append(result)
-    return results
-
 # Funções para comparar planilhas Excel
 def compare_excel(file1, file2, selected_sheet=None):
     try:
@@ -706,28 +629,11 @@ def smart_row_comparison(df1, df2, all_cols):
     Algoritmo inteligente que detecta inserções, deleções e alterações reais
     sem marcar linhas deslocadas como alteradas
     """
-    # Proteção contra dataframes sem colunas
-    if not all_cols:
-        all_cols = list(df1.columns) if not df1.empty else list(df2.columns)
-
-    # Se ainda estiver vazio, retorna dataframes vazios e stats zeradas
-    if not all_cols:
-        empty_df = pd.DataFrame()
-        return (empty_df, empty_df, {'changes': 0, 'additions': 0, 'deletions': 0, 'total_cells': 0})
-    all_cols = pd.Index(all_cols).drop_duplicates().tolist()
-    df1 = df1.loc[:, ~df1.columns.duplicated()]
-    df2 = df2.loc[:, ~df2.columns.duplicated()]
+    from difflib import SequenceMatcher
     
-    df1 = df1.reindex(columns=all_cols)
-    df2 = df2.reindex(columns=all_cols)
-
-    # Padroniza valores vazios para string vazia
-    df1 = df1.replace(["None", "nan", None, np.nan], "", regex=True)
-    df2 = df2.replace(["None", "nan", None, np.nan], "", regex=True)
-
     # Converter linhas para strings para comparação
     def row_to_string(row):
-        return '|'.join([str(val) if (pd.notna(val) and str(val).strip().lower() not in ["none", "nan"]) else '' for val in row])
+        return '|'.join([str(val) if pd.notna(val) else 'NaN' for val in row])
     
     # Criar listas de strings representando cada linha
     rows1 = [row_to_string(df1.iloc[i]) for i in range(len(df1))]
@@ -737,16 +643,13 @@ def smart_row_comparison(df1, df2, all_cols):
     matcher = SequenceMatcher(None, rows1, rows2)
     
     # Preparar DataFrames de resultado
-    max_rows = len(df1) + len(df2)
+    max_rows = max(len(df1), len(df2))
     result_df1 = pd.DataFrame(index=range(max_rows), columns=all_cols)
     result_df2 = pd.DataFrame(index=range(max_rows), columns=all_cols)
+    
+    # Preparar DataFrames de estilo
     style_df1 = pd.DataFrame('', index=range(max_rows), columns=all_cols)
     style_df2 = pd.DataFrame('', index=range(max_rows), columns=all_cols)
-    
-    def normalize(val):
-        if pd.isna(val):
-            return ''
-        return str(val).strip().lower().replace('–', '-').replace('“', '"').replace('”', '"')
     
     # Contadores para estatísticas
     changes_count = 0
@@ -761,8 +664,8 @@ def smart_row_comparison(df1, df2, all_cols):
             # Linhas iguais - copiar sem marcação
             for i, (idx1, idx2) in enumerate(zip(range(i1, i2), range(j1, j2))):
                 row_idx = current_row + i
-                result_df1.iloc[row_idx] = df1.iloc[idx1].values.tolist()
-                result_df2.iloc[row_idx] = df2.iloc[idx2].values.tolist()
+                result_df1.iloc[row_idx] = df1.iloc[idx1]
+                result_df2.iloc[row_idx] = df2.iloc[idx2]
                 # Sem estilo especial para linhas iguais
             current_row += (i2 - i1)
         
@@ -770,7 +673,7 @@ def smart_row_comparison(df1, df2, all_cols):
             # Linhas deletadas - aparecem apenas no arquivo 1
             for i, idx1 in enumerate(range(i1, i2)):
                 row_idx = current_row + i
-                result_df1.iloc[row_idx] = df1.iloc[idx1].values.tolist()
+                result_df1.iloc[row_idx] = df1.iloc[idx1]
                 # Linha vazia no arquivo 2
                 for col in all_cols:
                     style_df1.iloc[row_idx, style_df1.columns.get_loc(col)] = "background-color: #f8d7da; border-left: 4px solid #dc3545;"
@@ -782,7 +685,7 @@ def smart_row_comparison(df1, df2, all_cols):
             # Linhas inseridas - aparecem apenas no arquivo 2
             for i, idx2 in enumerate(range(j1, j2)):
                 row_idx = current_row + i
-                result_df2.iloc[row_idx] = df2.iloc[idx2].values.tolist()
+                result_df2.iloc[row_idx] = df2.iloc[idx2]
                 # Linha vazia no arquivo 1
                 for col in all_cols:
                     style_df1.iloc[row_idx, style_df1.columns.get_loc(col)] = "background-color: #e0e0e9; border-left: 4px solid #6c757d;"
@@ -791,61 +694,48 @@ def smart_row_comparison(df1, df2, all_cols):
             current_row += (j2 - j1)
             
         elif tag == 'replace':
-            max_replace_rows = max(i2 - i1, j2 - j1)
+            # Linhas substituídas - comparar célula por célula
+            max_replace_rows = max((i2 - i1), (j2 - j1))
+            
             for i in range(max_replace_rows):
                 row_idx = current_row + i
-
-                # Se não existe linha correspondente, cria linha vazia
-                if i < (i2 - i1):
-                    row1 = df1.iloc[i1 + i]
-                else:
-                    row1 = pd.Series([""] * len(all_cols), index=all_cols)
-                if i < (j2 - j1):
-                    row2 = df2.iloc[j1 + i]
-                else:
-                    row2 = pd.Series([""] * len(all_cols), index=all_cols)
-
-                # Se uma linha está vazia e a outra não, trata como adição ou remoção
-                if row1.isnull().all() or (row1 == "").all():
-                    # Linha só no arquivo 2 (adição)
-                    result_df2.iloc[row_idx] = row2.values.tolist()
-                    for col in all_cols:
-                        style_df1.iloc[row_idx, style_df1.columns.get_loc(col)] = "background-color: #e0e0e9; border-left: 4px solid #6c757d;"
-                        style_df2.iloc[row_idx, style_df2.columns.get_loc(col)] = "background-color: #d4edda; border-left: 4px solid #28a745;"
-                    additions_count += 1
-                elif row2.isnull().all() or (row2 == "").all():
-                    # Linha só no arquivo 1 (remoção)
-                    result_df1.iloc[row_idx] = row1.values.tolist()
-                    for col in all_cols:
-                        style_df1.iloc[row_idx, style_df1.columns.get_loc(col)] = "background-color: #f8d7da; border-left: 4px solid #dc3545;"
-                        style_df2.iloc[row_idx, style_df2.columns.get_loc(col)] = "background-color: #e0e0e9; border-left: 4px solid #6c757d;"
-                    deletions_count += 1
-                else:
-                    # Linhas diferentes: alteração célula a célula
-                    result_df1.iloc[row_idx] = row1.values.tolist()
-                    result_df2.iloc[row_idx] = row2.values.tolist()
-                    for col in all_cols:
-                        val1 = row1[col] if col in row1 else None
-                        val2 = row2[col] if col in row2 else None
-                        if pd.isna(val1) and pd.isna(val2):
-                            continue
-                        elif (str(val1).strip() == "" and str(val2).strip() == ""):
-                            continue
-                        elif str(val1).strip() != str(val2).strip():
-                            style_df1.iloc[row_idx, style_df1.columns.get_loc(col)] = "background-color: #ffff99; border-left: 4px solid #ffc107;"
-                            style_df2.iloc[row_idx, style_df2.columns.get_loc(col)] = "background-color: #ffff99; border-left: 4px solid #ffc107;"
-                            changes_count += 1
+                
+                # Obter linhas para comparação
+                row1 = df1.iloc[i1 + i] if i < (i2 - i1) else pd.Series([None] * len(all_cols), index=all_cols)
+                row2 = df2.iloc[j1 + i] if i < (j2 - j1) else pd.Series([None] * len(all_cols), index=all_cols)
+                
+                result_df1.iloc[row_idx] = row1
+                result_df2.iloc[row_idx] = row2
+                
+                # Comparar célula por célula para destacar diferenças específicas
+                for col in all_cols:
+                    val1 = row1[col] if col in row1.index else None
+                    val2 = row2[col] if col in row2.index else None
+                    
+                    col_idx1 = style_df1.columns.get_loc(col)
+                    col_idx2 = style_df2.columns.get_loc(col)
+                    
+                    if pd.isna(val1) and pd.isna(val2):
+                        # Ambos são NaN - sem estilo
+                        continue
+                    elif pd.isna(val1) and not pd.isna(val2):
+                        # Valor adicionado
+                        style_df1.iloc[row_idx, col_idx1] = "background-color: #e0e0e9; border-left: 4px solid #6c757d;"
+                        style_df2.iloc[row_idx, col_idx2] = "background-color: #d4edda; border-left: 4px solid #28a745;"
+                        additions_count += 1
+                    elif not pd.isna(val1) and pd.isna(val2):
+                        # Valor removido
+                        style_df1.iloc[row_idx, col_idx1] = "background-color: #f8d7da; border-left: 4px solid #dc3545;"
+                        style_df2.iloc[row_idx, col_idx2] = "background-color: #e0e0e9; border-left: 4px solid #6c757d;"
+                        deletions_count += 1
+                    elif str(val1) != str(val2):
+                        # Valor alterado
+                        style_df1.iloc[row_idx, col_idx1] = "background-color: #ffff99; border-left: 4px solid #ffc107;"
+                        style_df2.iloc[row_idx, col_idx2] = "background-color: #ffff99; border-left: 4px solid #ffc107;"
+                        changes_count += 1
+            
             current_row += max_replace_rows
-
-    result_df1 = result_df1.iloc[:current_row].copy()
-    result_df2 = result_df2.iloc[:current_row].copy()
-    style_df1 = style_df1.iloc[:current_row].copy()
-    style_df2 = style_df2.iloc[:current_row].copy()
-
-    # Padroniza valores vazios para string vazia
-    result_df1 = result_df1.replace(["None", "nan", None, np.nan], "", regex=True)
-    result_df2 = result_df2.replace(["None", "nan", None, np.nan], "", regex=True)
-
+    
     # Aplicar estilos aos DataFrames
     styled_df1 = result_df1.style.apply(
         lambda col: style_df1[col.name] if col.name in style_df1.columns else [''] * len(result_df1), 
@@ -920,13 +810,13 @@ def display_excel_comparison(result, sheet_name, file1_name, file2_name):
     if stats['changes'] + stats['additions'] + stats['deletions'] > 0:
         # Gerar relatório HTML para download
         html_report = generate_excel_report(styled_df1, styled_df2, stats, sheet_name, file1_name, file2_name)
-        # st.download_button(
-        #     label="Baixar Comparação Tabelas",
-        #     data=html_report.encode("utf-8"),
-        #     file_name=f"Comparacao_Excel_{sheet_name}.html",
-        #     mime="text/html",
-        #     type="secondary"
-        # )
+        st.download_button(
+            label="Baixar Comparação",
+            data=html_report.encode("utf-8"),
+            file_name=f"Comparacao_Excel_{sheet_name}.html",
+            mime="text/html",
+            type="secondary"
+        )
 
 def generate_excel_report(styled_df1, styled_df2, stats, sheet_name, file1_name, file2_name):
     """Gera relatório HTML da comparação para download"""
@@ -1135,6 +1025,8 @@ def main():
         """,unsafe_allow_html=True)
     st.markdown("<h1 style='text-align: center;'>Comparador de Arquivos e Textos da GNCP</h1>", unsafe_allow_html=True)
 
+
+
 # Interface principal
     tab1, tab2, tab3 = st.tabs([ "Comparar Textos", "Comparar Documentos", "Comparar Planilhas Excel"])
 
@@ -1160,7 +1052,7 @@ def main():
                 value=st.session_state.txt2, 
                 key="txt2_input", 
                 height=300,
-                help="Digite ou cole o segundo texto para ser comparado"
+                help="Digite ou cole o texto alterado para ser comparado"
             )
         
         if  st.session_state.txt1 and  st.session_state.txt2:
@@ -1230,25 +1122,6 @@ def main():
                             st.info("Os arquivos são idênticos!")
                         elif result_doc and (diff_doc is None or not diff_doc.empty):
                             st.markdown(result_doc, unsafe_allow_html=True)
-
-                            # Comparar tabelas se existirem
-                            file_ext = text1  # já foi definido como a extensão
-                            tables1 = tables2 = []
-
-                            if file_ext == "pdf":
-                                tables1 = extract_tables_from_pdf(st.session_state.arq1)
-                                tables2 = extract_tables_from_pdf(st.session_state.arq2)
-                            elif file_ext == "docx":
-                                tables1 = extract_tables_from_docx(st.session_state.arq1)
-                                tables2 = extract_tables_from_docx(st.session_state.arq2)
-
-                            if tables1 or tables2:
-                                st.markdown("---")
-                                st.markdown("## Comparação de Tabelas Detectadas")
-                                table_results = compare_table_list(tables1, tables2)
-                                for idx, result in enumerate(table_results):
-                                    display_excel_comparison(result, f"Tabela {idx+1}", st.session_state.arq1.name, st.session_state.arq2.name)
-                            
                             st.download_button(
                                 label="Baixar Comparação",
                                 data=result_doc.encode("utf-8"),
@@ -1265,6 +1138,7 @@ def main():
                 st.rerun()
 
     with tab3:
+        # st.title("EM DESENVOLVIMENTO")
         col1, col2 = st.columns(2)
 
         if "file_reset" not in st.session_state:
