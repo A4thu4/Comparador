@@ -13,7 +13,6 @@ import chardet
 from openpyxl import Workbook 
 from openpyxl.styles import PatternFill
 
-
 # Função para comparar textos
 def compare_texts(text1, text2):
     # Divide os textos em linhas
@@ -1024,8 +1023,6 @@ def main():
         </style>
         """,unsafe_allow_html=True)
     st.markdown("<h1 style='text-align: center;'>Comparador de Arquivos e Textos da GNCP</h1>", unsafe_allow_html=True)
-
-
 
 # Interface principal
     tab1, tab2, tab3 = st.tabs([ "Comparar Textos", "Comparar Documentos", "Comparar Planilhas Excel"])
