@@ -13,6 +13,906 @@ import chardet
 from openpyxl import Workbook 
 from openpyxl.styles import PatternFill
 
+
+# Função para comparar textos
+def compare_texts(text1, text2):
+    # Divide os textos em linhas
+    text1_lines = [line.strip() for line in text1.splitlines() if line.strip()]
+    text2_lines = [line.strip() for line in text2.splitlines() if line.strip()]
+    
+    # Usa SequenceMatcher para alinhar as linhas
+    matcher = SequenceMatcher(None, text1_lines, text2_lines)
+    
+    # Prepara o resultado em HTML
+    result = []
+    result.append("""
+    <style>
+        .diff-container {
+            display: flex;
+            width: 100%;
+            font-family: monospace;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            overflow: hidden;
+            max-height: 80vh; 
+            overflow-y: auto;
+            overflow-x: auto;
+        }
+        .diff-column {
+            width: 50%;
+            min-width: 0;
+            max-width: 50%;
+            padding: 10px;
+            margin: 0;
+            border-right: 1px solid #eee;
+            background: #fff;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+        }
+        .diff-column:last-child {
+            border-right: none;
+        }
+        .diff-line {
+            white-space: pre-wrap;
+            margin: 2px 0;
+            padding: 2px;
+            border-left: 4px solid transparent;
+        }
+        .diff-cell {
+            flex: 1;
+            padding: 2px 10px;
+            white-space: pre-wrap;
+        }
+        .unchanged {
+            background-color: #f8f8f8;
+        }
+        .deleted {
+            background-color: #ffdddd;
+            text-decoration: line-through;
+            border-left: 4px solid #ff6f6f;
+        }
+        .added {
+            background-color: #ddffdd;
+            text-decoration: underline;
+            border-left: 4px solid #4fe87b;
+        }
+        .changed-old {
+            background-color: #ff758f;
+            text-decoration: line-through;
+        }
+        .changed-new {
+            background-color: #abff4f;
+            text-decoration: underline;
+        }
+        .line-number {
+            color: #999;
+            margin-right: 5px;
+            user-select: none;
+            width: 20px;
+            display: inline-block;
+        }
+    </style>
+    <div class="diff-container">
+        <div class="diff-column">
+            <h3>Texto Original</h3>
+    """)
+    
+    left_lines = []
+    right_lines = []
+    
+    # Processa cada bloco de diferenças
+    for tag, i1, i2, j1, j2 in matcher.get_opcodes():
+
+        if tag == 'equal':
+            for line in text1_lines[i1:i2]:
+                left_lines.append(('unchanged', line))
+                right_lines.append(('unchanged', line))
+
+        elif tag == 'delete':
+            for line in text1_lines[i1:i2]:
+                left_lines.append(('deleted', line))
+                right_lines.append(('empty', ''))
+
+        elif tag == 'insert':
+            for line in text2_lines[j1:j2]:
+                if left_lines and left_lines[-1][0] == 'empty':
+                    right_lines[-1] = ('added', line)
+                else:
+                    left_lines.append(('empty',''))
+                    right_lines.append(('added',line))
+
+        elif tag == 'replace':
+            matched_pairs = []
+            used_new = set()
+            used_old = set()
+            # Pareamento linha a linha
+            for i, old_line in enumerate(text1_lines[i1:i2]):
+                best_match = None
+                best_ratio = 0.8
+                for j, new_line in enumerate(text2_lines[j1:j2]):
+                    if j in used_new:
+                        continue
+                    ratio = SequenceMatcher(None, old_line, new_line).ratio()
+                    if ratio > best_ratio:
+                        best_ratio = ratio
+                        best_match = j
+                if best_match is not None:
+                    matched_pairs.append((i, best_match))
+                    used_new.add(best_match)
+                    used_old.add(i)
+
+            # Agora percorre ambos os blocos na ordem original
+            old_idx, new_idx = 0, 0
+            len_old = i2 - i1
+            len_new = j2 - j1
+            while old_idx < len_old or new_idx < len_new:
+                # Se ambos são pareados
+                pair = next(((oi, nj) for oi, nj in matched_pairs if oi == old_idx and nj == new_idx), None)
+                if pair:
+                    old_line = text1_lines[i1 + old_idx]
+                    new_line = text2_lines[j1 + new_idx]
+                    d = Differ()
+                    diff = list(d.compare(old_line.split(), new_line.split()))
+                    old_text = []
+                    new_text = []
+                    for word in diff:
+                        if word.startswith('- '):
+                            old_text.append(f'<span class="changed-old">{word[2:]}</span>')
+                        elif word.startswith('+ '):
+                            new_text.append(f'<span class="changed-new">{word[2:]}</span>')
+                        elif word.startswith('  '):
+                            old_text.append(word[2:])
+                            new_text.append(word[2:])
+                    left_lines.append(('changed', ' '.join(old_text)))
+                    right_lines.append(('changed', ' '.join(new_text)))
+                    old_idx += 1
+                    new_idx += 1
+                elif old_idx < len_old and old_idx not in used_old:
+                    left_lines.append(('deleted', text1_lines[i1 + old_idx]))
+                    right_lines.append(('empty', ''))
+                    old_idx += 1
+                elif new_idx < len_new and new_idx not in used_new:
+                    left_lines.append(('empty', ''))
+                    right_lines.append(('added', text2_lines[j1 + new_idx]))
+                    new_idx += 1
+                else:
+                    old_idx += 1
+                    new_idx += 1
+
+    # Adiciona as linhas do lado esquerdo (original)
+    for i, (line_class, line) in enumerate(left_lines):
+        if line_class == 'empty':
+            result.append(f'<div class="diff-line empty"><span class="line-number">{i+1}</span>&nbsp;</div>')
+        else:
+            result.append(f'<div class="diff-line {line_class}"><span class="line-number">{i+1}</span>{line}</div>')
+    
+    result.append("""
+        </div>
+        <div class="diff-column">
+            <h3>Texto Modificado</h3>
+    """)
+    
+    # Adiciona as linhas do lado direito (modificado)
+    for i, (line_class, line) in enumerate(right_lines):
+        if line_class == 'empty':
+            result.append(f'<div class="diff-line empty"><span class="line-number">{i+1}</span>&nbsp;</div>')
+        else:
+            result.append(f'<div class="diff-line {line_class}"><span class="line-number">{i+1}</span>{line}</div>')
+    
+    result.append("""
+        </div>
+    </div>
+    """)
+    
+    return ''.join(result)
+
+# Funções para comparar arquivos 
+def extract_text(file):
+    """Extrai e padroniza texto de diferentes formatos de arquivo"""
+    if not file:
+        return None
+        
+    file_extension = file.name.split('.')[-1].lower()
+    if file_extension not in ['pdf', 'docx', 'doc', 'txt', 'csv']:
+        st.error(f"Formato não suportado: {file_extension}")
+        return None
+    
+    try:
+        # Padroniza o tratamento de encoding para todos os formatos
+        def decode_text(raw_data):
+            """Função auxiliar para decodificar texto com detecção de encoding"""
+            if not raw_data:
+                return ""
+                
+            # Detecta encoding com confiança mínima de 70%
+            detected = chardet.detect(raw_data)
+            encoding = detected['encoding'] if detected['confidence'] > 0.7 else 'utf-8'
+            
+            try:
+                return raw_data.decode(encoding)
+            except (UnicodeDecodeError, LookupError):
+                # Tenta utf-8 com fallback para substituição de caracteres inválidos
+                return raw_data.decode('utf-8', errors='replace')
+        
+        # PDF - Mantém estrutura original
+        if file_extension == 'pdf':
+            try:
+                reader = PdfReader(file)
+                num_paginas = len(reader.pages)
+                texto_completo = []
+                for i in range(num_paginas):
+                    pagina = reader.pages[i]
+                    texto_pagina = pagina.extract_text()
+                    texto_completo.append(texto_pagina)
+                texto_final = '\n'.join(texto_completo) if texto_completo else None
+                if texto_final:
+                    texto_final = texto_final.replace('\r\n', '\n').replace('\r', '\n')
+                    linhas = texto_final.split('\n')
+                    paragrafos = []
+                    paragrafo_atual = []
+                    for linha in linhas:
+                        # Remove numeração do início da linha (ex: "1. ", "2. ", "10. ")
+                        linha_sem_num = linha.lstrip()
+                        import re
+                        linha_sem_num = re.sub(r'^\d+\.\s*', '', linha_sem_num)
+                        if linha_sem_num.strip() == "":
+                            if paragrafo_atual:
+                                paragrafos.append(' '.join(paragrafo_atual).strip())
+                                paragrafo_atual = []
+                        else:
+                            paragrafo_atual.append(linha_sem_num.strip())
+                    if paragrafo_atual:
+                        paragrafos.append(' '.join(paragrafo_atual).strip())
+                    texto_final = '\n\n'.join(paragrafos)
+                return texto_final if texto_final else None
+            except Exception as e:
+                print(f"Erro ao ler o PDF: {e}")
+                return None
+            
+        # DOCX - Padroniza espaçamento entre parágrafos
+        elif file_extension in ['docx', 'doc']:
+            try:
+                doc = docx.Document(file)
+                text_lines = []
+                
+                for para in doc.paragraphs:
+                    if para.text.strip():
+                        text_lines.append(para.text.strip())
+                    else:
+                        text_lines.append('')
+                
+                text = '\n'.join(text_lines)
+                return text.strip() if text.strip() else None
+            except Exception as e:
+                st.error(f"Erro ao ler arquivo Word: {str(e)}")
+                return None
+
+        # TXT/CSV - Padroniza tratamento de quebras de linha
+        elif file_extension in ['txt', 'csv']:
+            file.seek(0)
+            raw_data = file.read()
+            text = decode_text(raw_data)
+            
+            if not text:
+                st.warning("O arquivo está vazio.")
+                return None
+                
+            # Padroniza quebras de linha para \n
+            text = text.replace('\r\n', '\n').replace('\r', '\n')
+            # Remove numeração do início de cada linha
+            import re
+            linhas = text.split('\n')
+            linhas_sem_enum = [
+                            re.sub(
+                                r'^\s*((\d+(\.\d+)*[.)]?)|[.\-•])[\s\t\u00A0]*',  # cobre . espaço, .\t, . , 1.2.3. etc
+                                '',
+                                linha
+                            ).strip()
+                            for linha in linhas
+                        ]            
+            texto_final = '\n'.join(linhas_sem_enum)
+
+            # Para CSV, trata como texto puro (não tenta parsear)
+            return texto_final.strip() if texto_final.strip() else None
+
+        else:
+            st.error(f"Formato não suportado: {file_extension}")
+            return None
+            
+    except Exception as e:
+        st.error(f"Erro ao processar arquivo: {str(e)}")
+        return None
+
+def compare_docs(doc1, doc2):
+    """Compara dois documentos com visualização lado a lado"""
+    text1 = extract_text(doc1) or ""
+    text2 = extract_text(doc2) or ""
+
+    if not text1 and not text2:
+        return None, None, True
+    
+    if text1.strip() == text2.strip():
+        return None, None, True
+    
+    # Divide os textos em linhas mantendo as quebras originais
+    text1_lines = text1.splitlines()
+    text2_lines = text2.splitlines()
+    
+    # Remove linhas vazias do início e fim, mas mantém as do meio
+    text1_lines = [line.rstrip() for line in text1_lines]
+    text2_lines = [line.rstrip() for line in text2_lines]
+    
+    # Usa SequenceMatcher para alinhar as linhas
+    matcher = SequenceMatcher(None, text1_lines, text2_lines)
+    
+    # Prepara o resultado em HTML (mesmo estilo anterior)
+    result = []
+    result.append("""
+    <style>
+        .diff-container {
+            display: flex;
+            width: 100%;
+            font-family: Arial, sans-serif;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            overflow: hidden;
+            max-height: 80vh; 
+            overflow-y: auto;
+            overflow-x: auto;
+        }
+        .diff-column {
+            width: 50%;
+            min-width: 0;
+            max-width: 50%;
+            padding: 10px;
+            margin: 0;
+            border-right: 1px solid #eee;
+            background: #fff;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+        }
+        .diff-column:last-child {
+            border-right: none;
+        }
+        .diff-line {
+            white-space: pre-wrap;
+            margin: 2px 0;
+            padding: 2px;
+            border-left: 4px solid transparent;
+        }
+        .unchanged {
+            background-color: #f8f8f8;
+        }
+        .deleted {
+            background-color: #ffdddd;
+            text-decoration: line-through;
+            border-left: 4px solid #ff6f6f;
+        }
+        .added {
+            background-color: #ddffdd;
+            text-decoration: underline;
+            border-left: 4px solid #4fe87b;
+        }
+        .changed-old {
+            background-color: #ff6f6f;
+            text-decoration: line-through;
+        }
+        .changed-new {
+            background-color: #4fe87b;
+            text-decoration: underline;
+        }
+        .line-number {
+            color: #999;
+            margin-right: 5px;
+            user-select: none;
+            width: 20px;
+            display: inline-block;
+        }
+        .diff-header {
+            background: #f5f5f5;
+            padding: 10px;
+            font-weight: bold;
+            border-bottom: 1px solid #ddd;
+            margin: -10px -10px 10px -10px;
+        }
+        .empty-line {
+            height: 5px;
+            margin: 2px 0;
+            background: repeating-linear-gradient(
+                45deg,
+                #f0f0f0,
+                #f0f0f0 2px,
+                white 2px,
+                white 4px
+            );
+        }
+    </style>
+    <div class="diff-container">
+        <div class="diff-column">
+            <div class="diff-header">Documento Original</div>
+    """)
+    
+    left_lines = []
+    right_lines = []
+    changes_report = []
+    line_counter = 1
+    
+    # Processa cada bloco de diferenças
+    for tag, i1, i2, j1, j2 in matcher.get_opcodes():
+        if tag == 'equal':
+            for line in text1_lines[i1:i2]:
+                if line.strip() == "":
+                    left_lines.append(('empty-line', '', line_counter))
+                    right_lines.append(('empty-line', '', line_counter))
+                else:
+                    left_lines.append(('unchanged', line, line_counter))
+                    right_lines.append(('unchanged', line, line_counter))
+                line_counter += 1
+
+        elif tag == 'delete':
+            for line in text1_lines[i1:i2]:
+                if line.strip() == "":
+                    left_lines.append(('empty-line', '', line_counter))
+                    right_lines.append(('empty-line', '', line_counter))
+                else:
+                    left_lines.append(('deleted', line, line_counter))
+                    right_lines.append(('empty', '', line_counter))
+                    changes_report.append({
+                        'Tipo': 'Removido',
+                        'Conteúdo': line,
+                        'Localização': f'Linha {line_counter}'
+                    })
+                line_counter += 1
+
+        elif tag == 'insert':
+            for line in text2_lines[j1:j2]:
+                if line.strip() == "":
+                    left_lines.append(('empty-line', '', line_counter))
+                    right_lines.append(('empty-line', '', line_counter))
+                else:
+                    if left_lines and left_lines[-1][0] == 'empty':
+                        right_lines[-1] = ('added', line, right_lines[-1][2])
+                    else:
+                        left_lines.append(('empty', '', line_counter))
+                        right_lines.append(('added', line, line_counter))
+                    changes_report.append({
+                        'Tipo': 'Adicionado',
+                        'Conteúdo': line,
+                        'Localização': f'Linha {line_counter}'
+                    })
+                line_counter += 1
+
+        elif tag == 'replace':
+            # Processa substituições mantendo a estrutura de linhas
+            max_lines = max((i2-i1), (j2-j1))
+            for n in range(max_lines):
+                old_line = text1_lines[i1 + n] if n < (i2-i1) else ""
+                new_line = text2_lines[j1 + n] if n < (j2-j1) else ""
+                
+                if old_line.strip() == "" and new_line.strip() == "":
+                    left_lines.append(('empty-line', '', line_counter))
+                    right_lines.append(('empty-line', '', line_counter))
+                elif old_line.strip() == "":
+                    left_lines.append(('empty', '', line_counter))
+                    right_lines.append(('added', new_line, line_counter))
+                    changes_report.append({
+                        'Tipo': 'Adicionado',
+                        'Conteúdo': new_line,
+                        'Localização': f'Linha {line_counter}'
+                    })
+                elif new_line.strip() == "":
+                    left_lines.append(('deleted', old_line, line_counter))
+                    right_lines.append(('empty', '', line_counter))
+                    changes_report.append({
+                        'Tipo': 'Removido',
+                        'Conteúdo': old_line,
+                        'Localização': f'Linha {line_counter}'
+                    })
+                else:
+                    # Comparação detalhada dentro da linha
+                    d = Differ()
+                    diff = list(d.compare(old_line.split(), new_line.split()))
+                    
+                    old_text = []
+                    new_text = []
+                    
+                    for word in diff:
+                        if word.startswith('- '):
+                            old_text.append(f'<span class="changed-old">{word[2:]}</span>')
+                        elif word.startswith('+ '):
+                            new_text.append(f'<span class="changed-new">{word[2:]}</span>')
+                        elif word.startswith('  '):
+                            old_text.append(word[2:])
+                            new_text.append(word[2:])
+                    
+                    left_lines.append(('changed', ' '.join(old_text), line_counter))
+                    right_lines.append(('changed', ' '.join(new_text), line_counter))
+                    
+                    changes_report.append({
+                        'Tipo': 'Alterado',
+                        'Original': old_line,
+                        'Modificado': new_line,
+                        'Localização': f'Linha {line_counter}'
+                    })
+                
+                line_counter += 1
+
+    # Adiciona as linhas do lado esquerdo (original)
+    for line_class, line, line_num in left_lines:
+        if line_class == 'empty-line':
+            result.append(f'<div class="empty-line" title="Linha {line_num}"></div>')
+        elif line_class == 'empty':
+            result.append(f'<div class="diff-line empty"><span class="line-number">{line_num}</span>&nbsp;</div>')
+        else:
+            result.append(f'<div class="diff-line {line_class}"><span class="line-number">{line_num}</span>{line}</div>')
+
+    result.append("""
+        </div>
+        <div class="diff-column">
+            <div class="diff-header">Documento Modificado</div>
+    """)
+    
+    # Adiciona as linhas do lado direito (modificado)
+    for line_class, line, line_num in right_lines:
+        if line_class == 'empty-line':
+            result.append(f'<div class="empty-line" title="Linha {line_num}"></div>')
+        elif line_class == 'empty':
+            result.append(f'<div class="diff-line empty"><span class="line-number">{line_num}</span>&nbsp;</div>')
+        else:
+            result.append(f'<div class="diff-line {line_class}"><span class="line-number">{line_num}</span>{line}</div>')
+    
+    result.append("""
+        </div>
+    </div>
+    """)
+    
+    # Gerar relatório de alterações
+    diff_df = pd.DataFrame(changes_report) if changes_report else None
+    
+    return ''.join(result), diff_df, False
+
+# Funções para comparar planilhas Excel
+def compare_excel(file1, file2, selected_sheet=None):
+    try:
+        xls1 = pd.ExcelFile(file1)
+        xls2 = pd.ExcelFile(file2)
+    except Exception as e:
+        st.error(f"Erro ao ler arquivos: {e}")
+        return None
+
+    # Padroniza nomes das abas
+    sheets1 = set(s.strip().lower() for s in xls1.sheet_names)
+    sheets2 = set(s.strip().lower() for s in xls2.sheet_names)
+
+    if sheets1 != sheets2:
+        st.warning(f"Os arquivos não possuem as mesmas abas.\n")
+        return None
+    
+    # Determinar quais abas comparar
+    all_sheets = sorted(set(xls1.sheet_names) | set(xls2.sheet_names))
+    
+    if selected_sheet:
+        if selected_sheet not in all_sheets:
+            st.warning(f"A aba '{selected_sheet}' não foi encontrada em ambos arquivos.")
+            return None
+        sheets_to_compare = [selected_sheet]
+    else:
+        sheets_to_compare = all_sheets
+
+    results = {}
+    
+    for sheet in sheets_to_compare:
+        # Carregar dados
+        df1 = xls1.parse(sheet) if sheet in xls1.sheet_names else pd.DataFrame()
+        df2 = xls2.parse(sheet) if sheet in xls2.sheet_names else pd.DataFrame()
+
+        # Remover índices e resetar
+        df1 = df1.reset_index(drop=True)
+        df2 = df2.reset_index(drop=True)
+        
+        # Garantir que as colunas sejam as mesmas
+        all_cols = list(df1.columns.union(df2.columns))
+        df1 = df1.reindex(columns=all_cols)
+        df2 = df2.reindex(columns=all_cols)
+        
+        # Usar algoritmo inteligente de comparação de linhas
+        comparison_result = smart_row_comparison(df1, df2, all_cols)
+        
+        results[sheet] = comparison_result
+    
+    return results if not selected_sheet else results.get(selected_sheet)
+
+def smart_row_comparison(df1, df2, all_cols):
+    """
+    Algoritmo inteligente que detecta inserções, deleções e alterações reais
+    sem marcar linhas deslocadas como alteradas
+    """
+    from difflib import SequenceMatcher
+    
+    # Converter linhas para strings para comparação
+    def row_to_string(row):
+        return '|'.join([str(val) if pd.notna(val) else 'NaN' for val in row])
+    
+    # Criar listas de strings representando cada linha
+    rows1 = [row_to_string(df1.iloc[i]) for i in range(len(df1))]
+    rows2 = [row_to_string(df2.iloc[i]) for i in range(len(df2))]
+    
+    # Usar SequenceMatcher para detectar operações (igual, inserir, deletar, substituir)
+    matcher = SequenceMatcher(None, rows1, rows2)
+    
+    # Preparar DataFrames de resultado
+    max_rows = max(len(df1), len(df2))
+    result_df1 = pd.DataFrame(index=range(max_rows), columns=all_cols)
+    result_df2 = pd.DataFrame(index=range(max_rows), columns=all_cols)
+    
+    # Preparar DataFrames de estilo
+    style_df1 = pd.DataFrame('', index=range(max_rows), columns=all_cols)
+    style_df2 = pd.DataFrame('', index=range(max_rows), columns=all_cols)
+    
+    # Contadores para estatísticas
+    changes_count = 0
+    additions_count = 0
+    deletions_count = 0
+    
+    current_row = 0
+    
+    # Processar cada operação do SequenceMatcher
+    for tag, i1, i2, j1, j2 in matcher.get_opcodes():
+        if tag == 'equal':
+            # Linhas iguais - copiar sem marcação
+            for i, (idx1, idx2) in enumerate(zip(range(i1, i2), range(j1, j2))):
+                row_idx = current_row + i
+                result_df1.iloc[row_idx] = df1.iloc[idx1]
+                result_df2.iloc[row_idx] = df2.iloc[idx2]
+                # Sem estilo especial para linhas iguais
+            current_row += (i2 - i1)
+        
+        elif tag == 'delete':
+            # Linhas deletadas - aparecem apenas no arquivo 1
+            for i, idx1 in enumerate(range(i1, i2)):
+                row_idx = current_row + i
+                result_df1.iloc[row_idx] = df1.iloc[idx1]
+                # Linha vazia no arquivo 2
+                for col in all_cols:
+                    style_df1.iloc[row_idx, style_df1.columns.get_loc(col)] = "background-color: #f8d7da; border-left: 4px solid #dc3545;"
+                    style_df2.iloc[row_idx, style_df2.columns.get_loc(col)] = "background-color: #e0e0e9; border-left: 4px solid #6c757d;"
+                deletions_count += 1
+            current_row += (i2 - i1)
+            
+        elif tag == 'insert':
+            # Linhas inseridas - aparecem apenas no arquivo 2
+            for i, idx2 in enumerate(range(j1, j2)):
+                row_idx = current_row + i
+                result_df2.iloc[row_idx] = df2.iloc[idx2]
+                # Linha vazia no arquivo 1
+                for col in all_cols:
+                    style_df1.iloc[row_idx, style_df1.columns.get_loc(col)] = "background-color: #e0e0e9; border-left: 4px solid #6c757d;"
+                    style_df2.iloc[row_idx, style_df2.columns.get_loc(col)] = "background-color: #d4edda; border-left: 4px solid #28a745;"
+                additions_count += 1
+            current_row += (j2 - j1)
+            
+        elif tag == 'replace':
+            # Linhas substituídas - comparar célula por célula
+            max_replace_rows = max((i2 - i1), (j2 - j1))
+            
+            for i in range(max_replace_rows):
+                row_idx = current_row + i
+                
+                # Obter linhas para comparação
+                row1 = df1.iloc[i1 + i] if i < (i2 - i1) else pd.Series([None] * len(all_cols), index=all_cols)
+                row2 = df2.iloc[j1 + i] if i < (j2 - j1) else pd.Series([None] * len(all_cols), index=all_cols)
+                
+                result_df1.iloc[row_idx] = row1
+                result_df2.iloc[row_idx] = row2
+                
+                # Comparar célula por célula para destacar diferenças específicas
+                for col in all_cols:
+                    val1 = row1[col] if col in row1.index else None
+                    val2 = row2[col] if col in row2.index else None
+                    
+                    col_idx1 = style_df1.columns.get_loc(col)
+                    col_idx2 = style_df2.columns.get_loc(col)
+                    
+                    if pd.isna(val1) and pd.isna(val2):
+                        # Ambos são NaN - sem estilo
+                        continue
+                    elif pd.isna(val1) and not pd.isna(val2):
+                        # Valor adicionado
+                        style_df1.iloc[row_idx, col_idx1] = "background-color: #e0e0e9; border-left: 4px solid #6c757d;"
+                        style_df2.iloc[row_idx, col_idx2] = "background-color: #d4edda; border-left: 4px solid #28a745;"
+                        additions_count += 1
+                    elif not pd.isna(val1) and pd.isna(val2):
+                        # Valor removido
+                        style_df1.iloc[row_idx, col_idx1] = "background-color: #f8d7da; border-left: 4px solid #dc3545;"
+                        style_df2.iloc[row_idx, col_idx2] = "background-color: #e0e0e9; border-left: 4px solid #6c757d;"
+                        deletions_count += 1
+                    elif str(val1) != str(val2):
+                        # Valor alterado
+                        style_df1.iloc[row_idx, col_idx1] = "background-color: #ffff99; border-left: 4px solid #ffc107;"
+                        style_df2.iloc[row_idx, col_idx2] = "background-color: #ffff99; border-left: 4px solid #ffc107;"
+                        changes_count += 1
+            
+            current_row += max_replace_rows
+    
+    # Aplicar estilos aos DataFrames
+    styled_df1 = result_df1.style.apply(
+        lambda col: style_df1[col.name] if col.name in style_df1.columns else [''] * len(result_df1), 
+        axis=0
+    )
+    styled_df2 = result_df2.style.apply(
+        lambda col: style_df2[col.name] if col.name in style_df2.columns else [''] * len(result_df2), 
+        axis=0
+    )
+    
+    # Calcular estatísticas
+    stats = {
+        'changes': changes_count,
+        'additions': additions_count,
+        'deletions': deletions_count,
+        'total_cells': len(all_cols) * max_rows
+    }
+    
+    return (styled_df1, styled_df2, stats)
+
+def display_excel_comparison(result, sheet_name, file1_name, file2_name):
+    """Exibe a comparação do Excel com estilo profissional tipo diffchecker"""
+    if len(result) == 3:
+        styled_df1, styled_df2, stats = result
+    else:
+        styled_df1, styled_df2 = result
+        stats = {'changes': 0, 'additions': 0, 'deletions': 0, 'total_cells': 0}
+    
+    # Legenda
+    st.markdown("""
+    <div style="background-color: #F3F3F3; padding: 15px; border-radius: 8px; margin: 15px 0;">
+        <h5 style="margin-top: 0; color: #333;">Legenda:</h5>
+        <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 5px;">
+                <div style="width: 20px; height: 20px; background-color: #ffff99; border-left: 4px solid #ffc107; border-radius: 3px;"></div>
+                <span>Alterados</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 5px;">
+                <div style="width: 20px; height: 20px; background-color: #d4edda; border-left: 4px solid #28a745; border-radius: 3px;"></div>
+                <span>Adicionados</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 5px;">
+                <div style="width: 20px; height: 20px; background-color: #f8d7da; border-left: 4px solid #dc3545; border-radius: 3px;"></div>
+                <span>Removidos</span>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Comparação lado a lado
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown(f"""
+        <div style="background-color: #F3F3F3; padding: 10px; border-radius: 5px; margin-bottom: 10px;">
+            <h4 style="margin: 0;">{file1_name}</h4>
+            <small>Aba: {sheet_name}</small>
+        </div>
+        """, unsafe_allow_html=True)
+        st.dataframe(styled_df1, use_container_width=True, height=600)
+    # st.divider()
+    with col2:
+        st.markdown(f"""
+        <div style="background-color: #F3F3F3; padding: 10px; border-radius: 5px; margin-bottom: 10px;">
+            <h4 style="margin: 0;">{file2_name}</h4>
+            <small>Aba: {sheet_name}</small>
+        </div>
+        """, unsafe_allow_html=True)
+        st.dataframe(styled_df2, use_container_width=True, height=600)
+    
+    # Botão de download
+    if stats['changes'] + stats['additions'] + stats['deletions'] > 0:
+        # Gerar relatório HTML para download
+        html_report = generate_excel_report(styled_df1, styled_df2, stats, sheet_name, file1_name, file2_name)
+        st.download_button(
+            label="Baixar Comparação",
+            data=html_report.encode("utf-8"),
+            file_name=f"Comparacao_Excel_{sheet_name}.html",
+            mime="text/html",
+            type="secondary"
+        )
+
+def generate_excel_report(styled_df1, styled_df2, stats, sheet_name, file1_name, file2_name):
+    """Gera relatório HTML da comparação para download"""
+    html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Relatório de Comparação Excel - {sheet_name}</title>
+        <meta charset="utf-8">
+        <style>
+            body {{ font-family: Arial, sans-serif; margin: 20px; }}
+            .header {{ background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; }}
+            .stats {{ display: flex; gap: 20px; margin: 15px 0; }}
+            .stat {{ background: white; padding: 15px; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }}
+            .legend {{ background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0; }}
+            .comparison {{ display: flex; gap: 20px; }}
+            .file-section {{ flex: 1; }}
+            .file-header {{ background-color: #e3f2fd; padding: 10px; border-radius: 5px; margin-bottom: 10px; }}
+            table {{ width: 100%; border-collapse: collapse; margin: 10px 0; }}
+            th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
+            th {{ background-color: #f5f5f5; }}
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <h1>📊 Relatório da Comparação </h1>
+            <p><strong>Arquivos:</strong> {file1_name} // {file2_name}</p>
+            <p><strong>Aba:</strong> {sheet_name}</p>
+        </div>
+        
+        <div class="stats">
+            <div class="stat">
+                <h3>🔄 Alterações</h3>
+                <p style="font-size: 24px; margin: 0;">{stats['changes']}</p>
+            </div>
+            <div class="stat">
+                <h3>➕ Adições</h3>
+                <p style="font-size: 24px; margin: 0;">{stats['additions']}</p>
+            </div>
+            <div class="stat">
+                <h3>➖ Remoções</h3>
+                <p style="font-size: 24px; margin: 0;">{stats['deletions']}</p>
+            </div>
+        </div>
+        
+        <div class="legend">
+            <h3>Legenda das Cores:</h3>
+            <p>• <span style="background-color: #fff3cd; padding: 2px 8px; border-left: 4px solid #ffc107;">Valores alterados</span></p>
+            <p>• <span style="background-color: #d4edda; padding: 2px 8px; border-left: 4px solid #28a745;">Valores adicionados</span></p>
+            <p>• <span style="background-color: #f8d7da; padding: 2px 8px; border-left: 4px solid #dc3545;">Valores removidos</span></p>
+        </div>
+        
+        <div class="comparison">
+            <div class="file-section">
+                <div class="file-header">
+                    <h3>{file1_name}</h3>
+                </div>
+                {styled_df1.to_html()}
+            </div>
+            
+            <div class="file-section">
+                <div class="file-header">
+                    <h3>{file2_name}</h3>
+                </div>
+                {styled_df2.to_html()}
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    return html
+
+def excel_equal(file1, file2):
+    try:
+        xls1 = pd.ExcelFile(file1)
+        xls2 = pd.ExcelFile(file2)
+    except Exception as e:
+        return False
+
+    sheets1 = set(xls1.sheet_names)
+    sheets2 = set(xls2.sheet_names)
+    if sheets1 != sheets2:
+        return False
+
+    for sheet in sheets1:
+        df1 = xls1.parse(sheet)
+        df2 = xls2.parse(sheet)
+        # Converte nomes das colunas para string antes de ordenar
+        df1.columns = df1.columns.map(str)
+        df2.columns = df2.columns.map(str)
+        df1 = df1.sort_index(axis=1).sort_index()
+        df2 = df2.sort_index(axis=1).sort_index()
+        if not df1.equals(df2):
+            return False
+    return True
+
 def main():
 # Configuração da página
     st.set_page_config(page_title="Comparador GNCP", page_icon="Brasão.png", layout="wide")
@@ -125,904 +1025,7 @@ def main():
         """,unsafe_allow_html=True)
     st.markdown("<h1 style='text-align: center;'>Comparador de Arquivos e Textos da GNCP</h1>", unsafe_allow_html=True)
 
-# Função para comparar textos
-    def compare_texts(text1, text2):
-        # Divide os textos em linhas
-        text1_lines = [line.strip() for line in text1.splitlines() if line.strip()]
-        text2_lines = [line.strip() for line in text2.splitlines() if line.strip()]
-        
-        # Usa SequenceMatcher para alinhar as linhas
-        matcher = SequenceMatcher(None, text1_lines, text2_lines)
-        
-        # Prepara o resultado em HTML
-        result = []
-        result.append("""
-        <style>
-            .diff-container {
-                display: flex;
-                width: 100%;
-                font-family: monospace;
-                border: 1px solid #ddd;
-                border-radius: 6px;
-                overflow: hidden;
-                max-height: 80vh; 
-                overflow-y: auto;
-                overflow-x: auto;
-            }
-            .diff-column {
-                width: 50%;
-                min-width: 0;
-                max-width: 50%;
-                padding: 10px;
-                margin: 0;
-                border-right: 1px solid #eee;
-                background: #fff;
-                box-sizing: border-box;
-                display: flex;
-                flex-direction: column;
-            }
-            .diff-column:last-child {
-                border-right: none;
-            }
-            .diff-line {
-                white-space: pre-wrap;
-                margin: 2px 0;
-                padding: 2px;
-                border-left: 4px solid transparent;
-            }
-            .diff-cell {
-                flex: 1;
-                padding: 2px 10px;
-                white-space: pre-wrap;
-            }
-            .unchanged {
-                background-color: #f8f8f8;
-            }
-            .deleted {
-                background-color: #ffdddd;
-                text-decoration: line-through;
-                border-left: 4px solid #ff6f6f;
-            }
-            .added {
-                background-color: #ddffdd;
-                text-decoration: underline;
-                border-left: 4px solid #4fe87b;
-            }
-            .changed-old {
-                background-color: #ff758f;
-                text-decoration: line-through;
-            }
-            .changed-new {
-                background-color: #abff4f;
-                text-decoration: underline;
-            }
-            .line-number {
-                color: #999;
-                margin-right: 5px;
-                user-select: none;
-                width: 20px;
-                display: inline-block;
-            }
-        </style>
-        <div class="diff-container">
-            <div class="diff-column">
-                <h3>Texto Original</h3>
-        """)
-        
-        left_lines = []
-        right_lines = []
-        
-        # Processa cada bloco de diferenças
-        for tag, i1, i2, j1, j2 in matcher.get_opcodes():
 
-            if tag == 'equal':
-                for line in text1_lines[i1:i2]:
-                    left_lines.append(('unchanged', line))
-                    right_lines.append(('unchanged', line))
-
-            elif tag == 'delete':
-                for line in text1_lines[i1:i2]:
-                    left_lines.append(('deleted', line))
-                    right_lines.append(('empty', ''))
-
-            elif tag == 'insert':
-                for line in text2_lines[j1:j2]:
-                    if left_lines and left_lines[-1][0] == 'empty':
-                        right_lines[-1] = ('added', line)
-                    else:
-                        left_lines.append(('empty',''))
-                        right_lines.append(('added',line))
-
-            elif tag == 'replace':
-                matched_pairs = []
-                used_new = set()
-                used_old = set()
-                # Pareamento linha a linha
-                for i, old_line in enumerate(text1_lines[i1:i2]):
-                    best_match = None
-                    best_ratio = 0.8
-                    for j, new_line in enumerate(text2_lines[j1:j2]):
-                        if j in used_new:
-                            continue
-                        ratio = SequenceMatcher(None, old_line, new_line).ratio()
-                        if ratio > best_ratio:
-                            best_ratio = ratio
-                            best_match = j
-                    if best_match is not None:
-                        matched_pairs.append((i, best_match))
-                        used_new.add(best_match)
-                        used_old.add(i)
-
-                # Agora percorre ambos os blocos na ordem original
-                old_idx, new_idx = 0, 0
-                len_old = i2 - i1
-                len_new = j2 - j1
-                while old_idx < len_old or new_idx < len_new:
-                    # Se ambos são pareados
-                    pair = next(((oi, nj) for oi, nj in matched_pairs if oi == old_idx and nj == new_idx), None)
-                    if pair:
-                        old_line = text1_lines[i1 + old_idx]
-                        new_line = text2_lines[j1 + new_idx]
-                        d = Differ()
-                        diff = list(d.compare(old_line.split(), new_line.split()))
-                        old_text = []
-                        new_text = []
-                        for word in diff:
-                            if word.startswith('- '):
-                                old_text.append(f'<span class="changed-old">{word[2:]}</span>')
-                            elif word.startswith('+ '):
-                                new_text.append(f'<span class="changed-new">{word[2:]}</span>')
-                            elif word.startswith('  '):
-                                old_text.append(word[2:])
-                                new_text.append(word[2:])
-                        left_lines.append(('changed', ' '.join(old_text)))
-                        right_lines.append(('changed', ' '.join(new_text)))
-                        old_idx += 1
-                        new_idx += 1
-                    elif old_idx < len_old and old_idx not in used_old:
-                        left_lines.append(('deleted', text1_lines[i1 + old_idx]))
-                        right_lines.append(('empty', ''))
-                        old_idx += 1
-                    elif new_idx < len_new and new_idx not in used_new:
-                        left_lines.append(('empty', ''))
-                        right_lines.append(('added', text2_lines[j1 + new_idx]))
-                        new_idx += 1
-                    else:
-                        old_idx += 1
-                        new_idx += 1
-
-        # Adiciona as linhas do lado esquerdo (original)
-        for i, (line_class, line) in enumerate(left_lines):
-            if line_class == 'empty':
-                result.append(f'<div class="diff-line empty"><span class="line-number">{i+1}</span>&nbsp;</div>')
-            else:
-                result.append(f'<div class="diff-line {line_class}"><span class="line-number">{i+1}</span>{line}</div>')
-        
-        result.append("""
-            </div>
-            <div class="diff-column">
-                <h3>Texto Modificado</h3>
-        """)
-        
-        # Adiciona as linhas do lado direito (modificado)
-        for i, (line_class, line) in enumerate(right_lines):
-            if line_class == 'empty':
-                result.append(f'<div class="diff-line empty"><span class="line-number">{i+1}</span>&nbsp;</div>')
-            else:
-                result.append(f'<div class="diff-line {line_class}"><span class="line-number">{i+1}</span>{line}</div>')
-        
-        result.append("""
-            </div>
-        </div>
-        """)
-        
-        return ''.join(result)
-
-# Funções para comparar arquivos 
-    def extract_text(file):
-        """Extrai e padroniza texto de diferentes formatos de arquivo"""
-        if not file:
-            return None
-            
-        file_extension = file.name.split('.')[-1].lower()
-        if file_extension not in ['pdf', 'docx', 'doc', 'txt', 'csv']:
-            st.error(f"Formato não suportado: {file_extension}")
-            return None
-        
-        try:
-            # Padroniza o tratamento de encoding para todos os formatos
-            def decode_text(raw_data):
-                """Função auxiliar para decodificar texto com detecção de encoding"""
-                if not raw_data:
-                    return ""
-                    
-                # Detecta encoding com confiança mínima de 70%
-                detected = chardet.detect(raw_data)
-                encoding = detected['encoding'] if detected['confidence'] > 0.7 else 'utf-8'
-                
-                try:
-                    return raw_data.decode(encoding)
-                except (UnicodeDecodeError, LookupError):
-                    # Tenta utf-8 com fallback para substituição de caracteres inválidos
-                    return raw_data.decode('utf-8', errors='replace')
-            
-            # PDF - Mantém estrutura original
-            if file_extension == 'pdf':
-                try:
-                    reader = PdfReader(file)
-                    num_paginas = len(reader.pages)
-                    texto_completo = []
-                    for i in range(num_paginas):
-                        pagina = reader.pages[i]
-                        texto_pagina = pagina.extract_text()
-                        texto_completo.append(texto_pagina)
-                    texto_final = '\n'.join(texto_completo) if texto_completo else None
-                    if texto_final:
-                        texto_final = texto_final.replace('\r\n', '\n').replace('\r', '\n')
-                        linhas = texto_final.split('\n')
-                        paragrafos = []
-                        paragrafo_atual = []
-                        for linha in linhas:
-                            # Remove numeração do início da linha (ex: "1. ", "2. ", "10. ")
-                            linha_sem_num = linha.lstrip()
-                            import re
-                            linha_sem_num = re.sub(r'^\d+\.\s*', '', linha_sem_num)
-                            if linha_sem_num.strip() == "":
-                                if paragrafo_atual:
-                                    paragrafos.append(' '.join(paragrafo_atual).strip())
-                                    paragrafo_atual = []
-                            else:
-                                paragrafo_atual.append(linha_sem_num.strip())
-                        if paragrafo_atual:
-                            paragrafos.append(' '.join(paragrafo_atual).strip())
-                        texto_final = '\n\n'.join(paragrafos)
-                    return texto_final if texto_final else None
-                except Exception as e:
-                    print(f"Erro ao ler o PDF: {e}")
-                    return None
-                
-            # DOCX - Padroniza espaçamento entre parágrafos
-            elif file_extension in ['docx', 'doc']:
-                try:
-                    doc = docx.Document(file)
-                    text_lines = []
-                    
-                    for para in doc.paragraphs:
-                        if para.text.strip():
-                            text_lines.append(para.text.strip())
-                        else:
-                            text_lines.append('')
-                    
-                    text = '\n'.join(text_lines)
-                    return text.strip() if text.strip() else None
-                except Exception as e:
-                    st.error(f"Erro ao ler arquivo Word: {str(e)}")
-                    return None
-
-            # TXT/CSV - Padroniza tratamento de quebras de linha
-            elif file_extension in ['txt', 'csv']:
-                file.seek(0)
-                raw_data = file.read()
-                text = decode_text(raw_data)
-                
-                if not text:
-                    st.warning("O arquivo está vazio.")
-                    return None
-                    
-                # Padroniza quebras de linha para \n
-                text = text.replace('\r\n', '\n').replace('\r', '\n')
-                # Remove numeração do início de cada linha
-                import re
-                linhas = text.split('\n')
-                linhas_sem_enum = [
-                                re.sub(
-                                    r'^\s*((\d+(\.\d+)*[.)]?)|[.\-•])[\s\t\u00A0]*',  # cobre . espaço, .\t, . , 1.2.3. etc
-                                    '',
-                                    linha
-                                ).strip()
-                                for linha in linhas
-                            ]            
-                texto_final = '\n'.join(linhas_sem_enum)
-
-                # Para CSV, trata como texto puro (não tenta parsear)
-                return texto_final.strip() if texto_final.strip() else None
-
-            else:
-                st.error(f"Formato não suportado: {file_extension}")
-                return None
-                
-        except Exception as e:
-            st.error(f"Erro ao processar arquivo: {str(e)}")
-            return None
-
-    def compare_docs(doc1, doc2):
-        """Compara dois documentos com visualização lado a lado"""
-        text1 = extract_text(doc1) or ""
-        text2 = extract_text(doc2) or ""
-
-        if not text1 and not text2:
-            return None, None, True
-        
-        if text1.strip() == text2.strip():
-            return None, None, True
-        
-        # Divide os textos em linhas mantendo as quebras originais
-        text1_lines = text1.splitlines()
-        text2_lines = text2.splitlines()
-        
-        # Remove linhas vazias do início e fim, mas mantém as do meio
-        text1_lines = [line.rstrip() for line in text1_lines]
-        text2_lines = [line.rstrip() for line in text2_lines]
-        
-        # Usa SequenceMatcher para alinhar as linhas
-        matcher = SequenceMatcher(None, text1_lines, text2_lines)
-        
-        # Prepara o resultado em HTML (mesmo estilo anterior)
-        result = []
-        result.append("""
-        <style>
-            .diff-container {
-                display: flex;
-                width: 100%;
-                font-family: Arial, sans-serif;
-                border: 1px solid #ddd;
-                border-radius: 5px;
-                overflow: hidden;
-                max-height: 80vh; 
-                overflow-y: auto;
-                overflow-x: auto;
-            }
-            .diff-column {
-                width: 50%;
-                min-width: 0;
-                max-width: 50%;
-                padding: 10px;
-                margin: 0;
-                border-right: 1px solid #eee;
-                background: #fff;
-                box-sizing: border-box;
-                display: flex;
-                flex-direction: column;
-            }
-            .diff-column:last-child {
-                border-right: none;
-            }
-            .diff-line {
-                white-space: pre-wrap;
-                margin: 2px 0;
-                padding: 2px;
-                border-left: 4px solid transparent;
-            }
-            .unchanged {
-                background-color: #f8f8f8;
-            }
-            .deleted {
-                background-color: #ffdddd;
-                text-decoration: line-through;
-                border-left: 4px solid #ff6f6f;
-            }
-            .added {
-                background-color: #ddffdd;
-                text-decoration: underline;
-                border-left: 4px solid #4fe87b;
-            }
-            .changed-old {
-                background-color: #ff6f6f;
-                text-decoration: line-through;
-            }
-            .changed-new {
-                background-color: #4fe87b;
-                text-decoration: underline;
-            }
-            .line-number {
-                color: #999;
-                margin-right: 5px;
-                user-select: none;
-                width: 20px;
-                display: inline-block;
-            }
-            .diff-header {
-                background: #f5f5f5;
-                padding: 10px;
-                font-weight: bold;
-                border-bottom: 1px solid #ddd;
-                margin: -10px -10px 10px -10px;
-            }
-            .empty-line {
-                height: 5px;
-                margin: 2px 0;
-                background: repeating-linear-gradient(
-                    45deg,
-                    #f0f0f0,
-                    #f0f0f0 2px,
-                    white 2px,
-                    white 4px
-                );
-            }
-        </style>
-        <div class="diff-container">
-            <div class="diff-column">
-                <div class="diff-header">Documento Original</div>
-        """)
-        
-        left_lines = []
-        right_lines = []
-        changes_report = []
-        line_counter = 1
-        
-        # Processa cada bloco de diferenças
-        for tag, i1, i2, j1, j2 in matcher.get_opcodes():
-            if tag == 'equal':
-                for line in text1_lines[i1:i2]:
-                    if line.strip() == "":
-                        left_lines.append(('empty-line', '', line_counter))
-                        right_lines.append(('empty-line', '', line_counter))
-                    else:
-                        left_lines.append(('unchanged', line, line_counter))
-                        right_lines.append(('unchanged', line, line_counter))
-                    line_counter += 1
-
-            elif tag == 'delete':
-                for line in text1_lines[i1:i2]:
-                    if line.strip() == "":
-                        left_lines.append(('empty-line', '', line_counter))
-                        right_lines.append(('empty-line', '', line_counter))
-                    else:
-                        left_lines.append(('deleted', line, line_counter))
-                        right_lines.append(('empty', '', line_counter))
-                        changes_report.append({
-                            'Tipo': 'Removido',
-                            'Conteúdo': line,
-                            'Localização': f'Linha {line_counter}'
-                        })
-                    line_counter += 1
-
-            elif tag == 'insert':
-                for line in text2_lines[j1:j2]:
-                    if line.strip() == "":
-                        left_lines.append(('empty-line', '', line_counter))
-                        right_lines.append(('empty-line', '', line_counter))
-                    else:
-                        if left_lines and left_lines[-1][0] == 'empty':
-                            right_lines[-1] = ('added', line, right_lines[-1][2])
-                        else:
-                            left_lines.append(('empty', '', line_counter))
-                            right_lines.append(('added', line, line_counter))
-                        changes_report.append({
-                            'Tipo': 'Adicionado',
-                            'Conteúdo': line,
-                            'Localização': f'Linha {line_counter}'
-                        })
-                    line_counter += 1
-
-            elif tag == 'replace':
-                # Processa substituições mantendo a estrutura de linhas
-                max_lines = max((i2-i1), (j2-j1))
-                for n in range(max_lines):
-                    old_line = text1_lines[i1 + n] if n < (i2-i1) else ""
-                    new_line = text2_lines[j1 + n] if n < (j2-j1) else ""
-                    
-                    if old_line.strip() == "" and new_line.strip() == "":
-                        left_lines.append(('empty-line', '', line_counter))
-                        right_lines.append(('empty-line', '', line_counter))
-                    elif old_line.strip() == "":
-                        left_lines.append(('empty', '', line_counter))
-                        right_lines.append(('added', new_line, line_counter))
-                        changes_report.append({
-                            'Tipo': 'Adicionado',
-                            'Conteúdo': new_line,
-                            'Localização': f'Linha {line_counter}'
-                        })
-                    elif new_line.strip() == "":
-                        left_lines.append(('deleted', old_line, line_counter))
-                        right_lines.append(('empty', '', line_counter))
-                        changes_report.append({
-                            'Tipo': 'Removido',
-                            'Conteúdo': old_line,
-                            'Localização': f'Linha {line_counter}'
-                        })
-                    else:
-                        # Comparação detalhada dentro da linha
-                        d = Differ()
-                        diff = list(d.compare(old_line.split(), new_line.split()))
-                        
-                        old_text = []
-                        new_text = []
-                        
-                        for word in diff:
-                            if word.startswith('- '):
-                                old_text.append(f'<span class="changed-old">{word[2:]}</span>')
-                            elif word.startswith('+ '):
-                                new_text.append(f'<span class="changed-new">{word[2:]}</span>')
-                            elif word.startswith('  '):
-                                old_text.append(word[2:])
-                                new_text.append(word[2:])
-                        
-                        left_lines.append(('changed', ' '.join(old_text), line_counter))
-                        right_lines.append(('changed', ' '.join(new_text), line_counter))
-                        
-                        changes_report.append({
-                            'Tipo': 'Alterado',
-                            'Original': old_line,
-                            'Modificado': new_line,
-                            'Localização': f'Linha {line_counter}'
-                        })
-                    
-                    line_counter += 1
-
-        # Adiciona as linhas do lado esquerdo (original)
-        for line_class, line, line_num in left_lines:
-            if line_class == 'empty-line':
-                result.append(f'<div class="empty-line" title="Linha {line_num}"></div>')
-            elif line_class == 'empty':
-                result.append(f'<div class="diff-line empty"><span class="line-number">{line_num}</span>&nbsp;</div>')
-            else:
-                result.append(f'<div class="diff-line {line_class}"><span class="line-number">{line_num}</span>{line}</div>')
-
-        result.append("""
-            </div>
-            <div class="diff-column">
-                <div class="diff-header">Documento Modificado</div>
-        """)
-        
-        # Adiciona as linhas do lado direito (modificado)
-        for line_class, line, line_num in right_lines:
-            if line_class == 'empty-line':
-                result.append(f'<div class="empty-line" title="Linha {line_num}"></div>')
-            elif line_class == 'empty':
-                result.append(f'<div class="diff-line empty"><span class="line-number">{line_num}</span>&nbsp;</div>')
-            else:
-                result.append(f'<div class="diff-line {line_class}"><span class="line-number">{line_num}</span>{line}</div>')
-        
-        result.append("""
-            </div>
-        </div>
-        """)
-        
-        # Gerar relatório de alterações
-        diff_df = pd.DataFrame(changes_report) if changes_report else None
-        
-        return ''.join(result), diff_df, False
-
-# Funções para comparar planilhas Excel
-    def compare_excel(file1, file2, selected_sheet=None):
-        try:
-            xls1 = pd.ExcelFile(file1)
-            xls2 = pd.ExcelFile(file2)
-        except Exception as e:
-            st.error(f"Erro ao ler arquivos: {e}")
-            return None
-
-        # Padroniza nomes das abas
-        sheets1 = set(s.strip().lower() for s in xls1.sheet_names)
-        sheets2 = set(s.strip().lower() for s in xls2.sheet_names)
-
-        if sheets1 != sheets2:
-            st.warning(f"Os arquivos não possuem as mesmas abas.\n")
-            return None
-        
-        # Determinar quais abas comparar
-        all_sheets = sorted(set(xls1.sheet_names) | set(xls2.sheet_names))
-        
-        if selected_sheet:
-            if selected_sheet not in all_sheets:
-                st.warning(f"A aba '{selected_sheet}' não foi encontrada em ambos arquivos.")
-                return None
-            sheets_to_compare = [selected_sheet]
-        else:
-            sheets_to_compare = all_sheets
-
-        results = {}
-        
-        for sheet in sheets_to_compare:
-            # Carregar dados
-            df1 = xls1.parse(sheet) if sheet in xls1.sheet_names else pd.DataFrame()
-            df2 = xls2.parse(sheet) if sheet in xls2.sheet_names else pd.DataFrame()
-
-            # Remover índices e resetar
-            df1 = df1.reset_index(drop=True)
-            df2 = df2.reset_index(drop=True)
-            
-            # Garantir que as colunas sejam as mesmas
-            all_cols = list(df1.columns.union(df2.columns))
-            df1 = df1.reindex(columns=all_cols)
-            df2 = df2.reindex(columns=all_cols)
-            
-            # Usar algoritmo inteligente de comparação de linhas
-            comparison_result = smart_row_comparison(df1, df2, all_cols)
-            
-            results[sheet] = comparison_result
-        
-        return results if not selected_sheet else results.get(selected_sheet)
-
-    def smart_row_comparison(df1, df2, all_cols):
-        """
-        Algoritmo inteligente que detecta inserções, deleções e alterações reais
-        sem marcar linhas deslocadas como alteradas
-        """
-        from difflib import SequenceMatcher
-        
-        # Converter linhas para strings para comparação
-        def row_to_string(row):
-            return '|'.join([str(val) if pd.notna(val) else 'NaN' for val in row])
-        
-        # Criar listas de strings representando cada linha
-        rows1 = [row_to_string(df1.iloc[i]) for i in range(len(df1))]
-        rows2 = [row_to_string(df2.iloc[i]) for i in range(len(df2))]
-        
-        # Usar SequenceMatcher para detectar operações (igual, inserir, deletar, substituir)
-        matcher = SequenceMatcher(None, rows1, rows2)
-        
-        # Preparar DataFrames de resultado
-        max_rows = max(len(df1), len(df2))
-        result_df1 = pd.DataFrame(index=range(max_rows), columns=all_cols)
-        result_df2 = pd.DataFrame(index=range(max_rows), columns=all_cols)
-        
-        # Preparar DataFrames de estilo
-        style_df1 = pd.DataFrame('', index=range(max_rows), columns=all_cols)
-        style_df2 = pd.DataFrame('', index=range(max_rows), columns=all_cols)
-        
-        # Contadores para estatísticas
-        changes_count = 0
-        additions_count = 0
-        deletions_count = 0
-        
-        current_row = 0
-        
-        # Processar cada operação do SequenceMatcher
-        for tag, i1, i2, j1, j2 in matcher.get_opcodes():
-            if tag == 'equal':
-                # Linhas iguais - copiar sem marcação
-                for i, (idx1, idx2) in enumerate(zip(range(i1, i2), range(j1, j2))):
-                    row_idx = current_row + i
-                    result_df1.iloc[row_idx] = df1.iloc[idx1]
-                    result_df2.iloc[row_idx] = df2.iloc[idx2]
-                    # Sem estilo especial para linhas iguais
-                current_row += (i2 - i1)
-            
-            elif tag == 'delete':
-                # Linhas deletadas - aparecem apenas no arquivo 1
-                for i, idx1 in enumerate(range(i1, i2)):
-                    row_idx = current_row + i
-                    result_df1.iloc[row_idx] = df1.iloc[idx1]
-                    # Linha vazia no arquivo 2
-                    for col in all_cols:
-                        style_df1.iloc[row_idx, style_df1.columns.get_loc(col)] = "background-color: #f8d7da; border-left: 4px solid #dc3545;"
-                        style_df2.iloc[row_idx, style_df2.columns.get_loc(col)] = "background-color: #e0e0e9; border-left: 4px solid #6c757d;"
-                    deletions_count += 1
-                current_row += (i2 - i1)
-                
-            elif tag == 'insert':
-                # Linhas inseridas - aparecem apenas no arquivo 2
-                for i, idx2 in enumerate(range(j1, j2)):
-                    row_idx = current_row + i
-                    result_df2.iloc[row_idx] = df2.iloc[idx2]
-                    # Linha vazia no arquivo 1
-                    for col in all_cols:
-                        style_df1.iloc[row_idx, style_df1.columns.get_loc(col)] = "background-color: #e0e0e9; border-left: 4px solid #6c757d;"
-                        style_df2.iloc[row_idx, style_df2.columns.get_loc(col)] = "background-color: #d4edda; border-left: 4px solid #28a745;"
-                    additions_count += 1
-                current_row += (j2 - j1)
-                
-            elif tag == 'replace':
-                # Linhas substituídas - comparar célula por célula
-                max_replace_rows = max((i2 - i1), (j2 - j1))
-                
-                for i in range(max_replace_rows):
-                    row_idx = current_row + i
-                    
-                    # Obter linhas para comparação
-                    row1 = df1.iloc[i1 + i] if i < (i2 - i1) else pd.Series([None] * len(all_cols), index=all_cols)
-                    row2 = df2.iloc[j1 + i] if i < (j2 - j1) else pd.Series([None] * len(all_cols), index=all_cols)
-                    
-                    result_df1.iloc[row_idx] = row1
-                    result_df2.iloc[row_idx] = row2
-                    
-                    # Comparar célula por célula para destacar diferenças específicas
-                    for col in all_cols:
-                        val1 = row1[col] if col in row1.index else None
-                        val2 = row2[col] if col in row2.index else None
-                        
-                        col_idx1 = style_df1.columns.get_loc(col)
-                        col_idx2 = style_df2.columns.get_loc(col)
-                        
-                        if pd.isna(val1) and pd.isna(val2):
-                            # Ambos são NaN - sem estilo
-                            continue
-                        elif pd.isna(val1) and not pd.isna(val2):
-                            # Valor adicionado
-                            style_df1.iloc[row_idx, col_idx1] = "background-color: #e0e0e9; border-left: 4px solid #6c757d;"
-                            style_df2.iloc[row_idx, col_idx2] = "background-color: #d4edda; border-left: 4px solid #28a745;"
-                            additions_count += 1
-                        elif not pd.isna(val1) and pd.isna(val2):
-                            # Valor removido
-                            style_df1.iloc[row_idx, col_idx1] = "background-color: #f8d7da; border-left: 4px solid #dc3545;"
-                            style_df2.iloc[row_idx, col_idx2] = "background-color: #e0e0e9; border-left: 4px solid #6c757d;"
-                            deletions_count += 1
-                        elif str(val1) != str(val2):
-                            # Valor alterado
-                            style_df1.iloc[row_idx, col_idx1] = "background-color: #ffff99; border-left: 4px solid #ffc107;"
-                            style_df2.iloc[row_idx, col_idx2] = "background-color: #ffff99; border-left: 4px solid #ffc107;"
-                            changes_count += 1
-                
-                current_row += max_replace_rows
-        
-        # Aplicar estilos aos DataFrames
-        styled_df1 = result_df1.style.apply(
-            lambda col: style_df1[col.name] if col.name in style_df1.columns else [''] * len(result_df1), 
-            axis=0
-        )
-        styled_df2 = result_df2.style.apply(
-            lambda col: style_df2[col.name] if col.name in style_df2.columns else [''] * len(result_df2), 
-            axis=0
-        )
-        
-        # Calcular estatísticas
-        stats = {
-            'changes': changes_count,
-            'additions': additions_count,
-            'deletions': deletions_count,
-            'total_cells': len(all_cols) * max_rows
-        }
-        
-        return (styled_df1, styled_df2, stats)
-
-    def display_excel_comparison(result, sheet_name, file1_name, file2_name):
-        """Exibe a comparação do Excel com estilo profissional tipo diffchecker"""
-        if len(result) == 3:
-            styled_df1, styled_df2, stats = result
-        else:
-            styled_df1, styled_df2 = result
-            stats = {'changes': 0, 'additions': 0, 'deletions': 0, 'total_cells': 0}
-        
-        # Legenda
-        st.markdown("""
-        <div style="background-color: #F3F3F3; padding: 15px; border-radius: 8px; margin: 15px 0;">
-            <h5 style="margin-top: 0; color: #333;">Legenda:</h5>
-            <div style="display: flex; gap: 20px; flex-wrap: wrap;">
-                <div style="display: flex; align-items: center; gap: 5px;">
-                    <div style="width: 20px; height: 20px; background-color: #ffff99; border-left: 4px solid #ffc107; border-radius: 3px;"></div>
-                    <span>Alterados</span>
-                </div>
-                <div style="display: flex; align-items: center; gap: 5px;">
-                    <div style="width: 20px; height: 20px; background-color: #d4edda; border-left: 4px solid #28a745; border-radius: 3px;"></div>
-                    <span>Adicionados</span>
-                </div>
-                <div style="display: flex; align-items: center; gap: 5px;">
-                    <div style="width: 20px; height: 20px; background-color: #f8d7da; border-left: 4px solid #dc3545; border-radius: 3px;"></div>
-                    <span>Removidos</span>
-                </div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Comparação lado a lado
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.markdown(f"""
-            <div style="background-color: #F3F3F3; padding: 10px; border-radius: 5px; margin-bottom: 10px;">
-                <h4 style="margin: 0;">{file1_name}</h4>
-                <small>Aba: {sheet_name}</small>
-            </div>
-            """, unsafe_allow_html=True)
-            st.dataframe(styled_df1, use_container_width=True, height=600)
-        # st.divider()
-        with col2:
-            st.markdown(f"""
-            <div style="background-color: #F3F3F3; padding: 10px; border-radius: 5px; margin-bottom: 10px;">
-                <h4 style="margin: 0;">{file2_name}</h4>
-                <small>Aba: {sheet_name}</small>
-            </div>
-            """, unsafe_allow_html=True)
-            st.dataframe(styled_df2, use_container_width=True, height=600)
-        
-        # Botão de download
-        if stats['changes'] + stats['additions'] + stats['deletions'] > 0:
-            # Gerar relatório HTML para download
-            html_report = generate_excel_report(styled_df1, styled_df2, stats, sheet_name, file1_name, file2_name)
-            st.download_button(
-                label="Baixar Comparação",
-                data=html_report.encode("utf-8"),
-                file_name=f"Comparacao_Excel_{sheet_name}.html",
-                mime="text/html",
-                type="secondary"
-            )
-
-    def generate_excel_report(styled_df1, styled_df2, stats, sheet_name, file1_name, file2_name):
-        """Gera relatório HTML da comparação para download"""
-        html = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Relatório de Comparação Excel - {sheet_name}</title>
-            <meta charset="utf-8">
-            <style>
-                body {{ font-family: Arial, sans-serif; margin: 20px; }}
-                .header {{ background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; }}
-                .stats {{ display: flex; gap: 20px; margin: 15px 0; }}
-                .stat {{ background: white; padding: 15px; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }}
-                .legend {{ background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0; }}
-                .comparison {{ display: flex; gap: 20px; }}
-                .file-section {{ flex: 1; }}
-                .file-header {{ background-color: #e3f2fd; padding: 10px; border-radius: 5px; margin-bottom: 10px; }}
-                table {{ width: 100%; border-collapse: collapse; margin: 10px 0; }}
-                th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
-                th {{ background-color: #f5f5f5; }}
-            </style>
-        </head>
-        <body>
-            <div class="header">
-                <h1>📊 Relatório da Comparação </h1>
-                <p><strong>Arquivos:</strong> {file1_name} // {file2_name}</p>
-                <p><strong>Aba:</strong> {sheet_name}</p>
-            </div>
-            
-            <div class="stats">
-                <div class="stat">
-                    <h3>🔄 Alterações</h3>
-                    <p style="font-size: 24px; margin: 0;">{stats['changes']}</p>
-                </div>
-                <div class="stat">
-                    <h3>➕ Adições</h3>
-                    <p style="font-size: 24px; margin: 0;">{stats['additions']}</p>
-                </div>
-                <div class="stat">
-                    <h3>➖ Remoções</h3>
-                    <p style="font-size: 24px; margin: 0;">{stats['deletions']}</p>
-                </div>
-            </div>
-            
-            <div class="legend">
-                <h3>Legenda das Cores:</h3>
-                <p>• <span style="background-color: #fff3cd; padding: 2px 8px; border-left: 4px solid #ffc107;">Valores alterados</span></p>
-                <p>• <span style="background-color: #d4edda; padding: 2px 8px; border-left: 4px solid #28a745;">Valores adicionados</span></p>
-                <p>• <span style="background-color: #f8d7da; padding: 2px 8px; border-left: 4px solid #dc3545;">Valores removidos</span></p>
-            </div>
-            
-            <div class="comparison">
-                <div class="file-section">
-                    <div class="file-header">
-                        <h3>{file1_name}</h3>
-                    </div>
-                    {styled_df1.to_html()}
-                </div>
-                
-                <div class="file-section">
-                    <div class="file-header">
-                        <h3>{file2_name}</h3>
-                    </div>
-                    {styled_df2.to_html()}
-                </div>
-            </div>
-        </body>
-        </html>
-        """
-        return html
-
-    def excel_equal(file1, file2):
-        try:
-            xls1 = pd.ExcelFile(file1)
-            xls2 = pd.ExcelFile(file2)
-        except Exception as e:
-            return False
-
-        sheets1 = set(xls1.sheet_names)
-        sheets2 = set(xls2.sheet_names)
-        if sheets1 != sheets2:
-            return False
-
-        for sheet in sheets1:
-            df1 = xls1.parse(sheet)
-            df2 = xls2.parse(sheet)
-            # Converte nomes das colunas para string antes de ordenar
-            df1.columns = df1.columns.map(str)
-            df2.columns = df2.columns.map(str)
-            df1 = df1.sort_index(axis=1).sort_index()
-            df2 = df2.sort_index(axis=1).sort_index()
-            if not df1.equals(df2):
-                return False
-        return True
 
 # Interface principal
     tab1, tab2, tab3 = st.tabs([ "Comparar Textos", "Comparar Documentos", "Comparar Planilhas Excel"])
