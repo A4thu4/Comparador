@@ -1141,49 +1141,55 @@ def main():
     with tab1:
         col1, col2 = st.columns(2)
 
-        if "txt1" not in st.session_state:
-            st.session_state.txt1 = ""
-        if "txt2" not in st.session_state:
-            st.session_state.txt2 = ""
-        
+        # Inicializa contador de reset
+        if "txt_reset" not in st.session_state:
+            st.session_state.txt_reset = 0
+
+        # Gera as chaves dinâmicas com base no contador
+        txt1_key = f"txt1_input_{st.session_state.txt_reset}"
+        txt2_key = f"txt2_input_{st.session_state.txt_reset}"
+
         with col1:
-            st.session_state.txt1 = st.text_area(
-                "Texto Original", 
-                value=st.session_state.txt1, 
-                key="txt1_input",  
+            st.text_area(
+                "Texto Original",
+                key=txt1_key,
                 height=300,
                 help="Digite ou cole o texto original para ser comparado"
             )
+
         with col2:
-            st.session_state.txt2 = st.text_area(
-                "Texto Modificado", 
-                value=st.session_state.txt2, 
-                key="txt2_input", 
+            st.text_area(
+                "Texto Modificado",
+                key=txt2_key,
                 height=300,
                 help="Digite ou cole o segundo texto para ser comparado"
             )
-        
-        if  st.session_state.txt1 and  st.session_state.txt2:
+
+        # Verifica se os dois textos foram preenchidos
+        txt1 = st.session_state.get(txt1_key, "")
+        txt2 = st.session_state.get(txt2_key, "")
+
+        if txt1 and txt2:
             btn_col1, btn_col2 = st.columns([1, 1])
+
             with btn_col1:
                 comparar = st.button("Comparar Textos", type="primary")
             with btn_col2:
                 apagar = st.button("Limpar Textos")
-                
+
             if comparar:
-                comparison = compare_texts( st.session_state.txt1,  st.session_state.txt2)
+                comparison = compare_texts(txt1, txt2)
                 st.markdown(comparison, unsafe_allow_html=True)
-                
+
                 st.download_button(
-                label="Baixar Comparação",
-                data=comparison.encode("utf-8"),
-                file_name="Textos Comparados.html",
-                mime="text/html"
-            )
-                
+                    label="Baixar Comparação",
+                    data=comparison.encode("utf-8"),
+                    file_name="Textos Comparados.html",
+                    mime="text/html"
+                )
+
             if apagar:
-                st.session_state.txt1 = ""
-                st.session_state.txt2 = ""
+                st.session_state.txt_reset += 1
                 st.rerun()
 
     with tab2:
