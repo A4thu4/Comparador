@@ -33,8 +33,8 @@ Uma ferramenta feita com Streamlit para comparar **textos, documentos e planilha
 
 1. **Clone o repositório**:
    ```bash
-   git clone https://github.com/seu-usuario/seu-repo.git
-   cd seu-repo
+   git clone https://github.com/A4thu4/Comparador.git
+   cd Comparador
    ```
 
 2. **Crie o ambiente virtual**:
