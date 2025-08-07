@@ -1,7 +1,7 @@
 # Comparador
 # 🧠 Comparador GNCP
 
-Uma ferramenta feita com Streamlit para comparar **textos, documentos e planilhas** com visual profissional, pensado para facilitar o trabalho na análise de alterações entre versões de arquivos usados na Gerência de Normas e Critérios de Produtiviade.
+Uma ferramenta feita com Streamlit para comparar **textos, documentos e planilhas** com visual profissional, pensado para facilitar o trabalho na análise de alterações entre versões de arquivos usados na Gerência de Normas e Critérios de Produtividade.
 
 ---
 
