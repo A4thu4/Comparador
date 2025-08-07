@@ -72,13 +72,13 @@ Uma ferramenta feita com Streamlit para comparar **textos, documentos e planilha
 ## 📷 Exemplos de uso
 
 ### Comparação de textos:
-![text](https://github.com/A4thu4/Comparador/assets/image-text.png)
+![text](/workspaces/Comparador/assets/image-text.png)
 
 ### Comparação de documentos:
-![doc](https://github.com/A4thu4/Comparador/assets/image-doc.png)
+![doc](/workspaces/Comparador/assets/image-doc.png)
 
 ### Comparação de planilhas:
-![excel](https://github.com/A4thu4/Comparador/assets/image-excel.png)
+![excel](/workspaces/Comparador/assets/image-excel.png)
 
 ---
 
