@@ -85,7 +85,7 @@ Uma ferramenta feita com Streamlit para comparar **textos, documentos e planilha
 
 > Feito por Arthur Mamedes – Estudante de Ciência da Computação e estagiário na Gerência de Normas e Critérios de Produtividade (GNCP).
 
-📬 arthur@email.com
+📬 arthurmamedesborges@gmail.com
 
 ---
 
