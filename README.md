@@ -92,4 +92,4 @@ Uma ferramenta feita com Streamlit para comparar **textos, documentos e planilha
 
 ## 📄 Licença
 
-Este projeto está sob a licença [MIT](LICENSE).
+Este projeto está sob a licença [MIT](assets/LICENSE).
