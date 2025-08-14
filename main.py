@@ -1,18 +1,14 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-from io import BytesIO
-import os, re
+import re
 # Comparar Textos
 from difflib import Differ, SequenceMatcher 
 # Comparar Documentos
-from PyPDF2 import PdfReader, PdfWriter 
+from PyPDF2 import PdfReader
 import pdfplumber
 import docx
 import chardet 
-#Comparar Excel
-from openpyxl import Workbook 
-from openpyxl.styles import PatternFill
 
 # Função para comparar textos
 def compare_texts(text1, text2):
