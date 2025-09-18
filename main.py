@@ -26,7 +26,7 @@ def compare_texts(text1, text2):
         .diff-container {
             display: flex;
             width: 100%;
-            font-family: monospace;
+            font-family: Calibri, Arial, sans-serif;
             border: 1px solid #ddd;
             border-radius: 6px;
             overflow: hidden;
@@ -416,7 +416,7 @@ def compare_docs(doc1, doc2):
         .diff-container {
             display: flex;
             width: 100%;
-            font-family: Arial, sans-serif;
+            font-family: Calibri, Arial, sans-serif;
             border: 1px solid #ddd;
             border-radius: 5px;
             overflow: hidden;
