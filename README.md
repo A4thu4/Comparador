@@ -60,11 +60,11 @@ Uma ferramenta feita com Streamlit para comparar **textos, documentos e planilha
 ## 📁 Estrutura do Projeto
 
 ```bash
-📦 projeto/
+📦 Comparador /
+├── assets/                 # Imagens e licença
 ├── main.py                 # Código principal do Streamlit
-├── requirements.txt        # Dependências do projeto
 ├── README.md               # Este arquivo
-├── assets/                 # (Opcional) imagens e logos
+├── requirements.txt        # Dependências do projeto
 ```
 
 ---
