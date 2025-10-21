@@ -9,7 +9,7 @@ jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
-      - name: Ping Render Comparador App
+      - name: Ping Comparador App
         run: | 
           curl -I https://comparador-gncp-sead.streamlit.app/ || true
           curl -I https://comparador-gncp.onrender.com || true
