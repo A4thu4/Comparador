@@ -12,3 +12,4 @@ jobs:
       - name: Ping Render Comparador App
         run: | 
           curl -I https://comparador-gncp-sead.streamlit.app/ || true
+          curl -I https://comparador-gncp.onrender.com || true
