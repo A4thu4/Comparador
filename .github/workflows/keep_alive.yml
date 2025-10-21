@@ -1,0 +1,14 @@
+name: Keep Comparador Alive
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"  # executa a cada 10 minutos
+  workflow_dispatch:        # permite rodar manualmente também
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Render Comparador App
+        run: | 
+          curl -I https://comparador-gncp-sead.streamlit.app/ || true
