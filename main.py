@@ -1024,7 +1024,7 @@ def main():
     st.set_page_config(page_title="Comparador GNCP", page_icon="assets/Brasão.png", layout="wide")
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        st.image("assets/Logomarca_GNCP_transparente.png", width=800)
+        st.image("assets/Logomarca SEAD.png", width=800)
         
 # CSS customizado 
     st.markdown(
@@ -1275,7 +1275,7 @@ def main():
         with col1:
             st.session_state.file1 = st.file_uploader(
                 "Carregar Arquivo Excel 1", 
-                type=["xlsx", "xls", "xlsm"],
+                type=["xlsx", "xls"],
                 accept_multiple_files=False, 
                 key=f"wb1_{st.session_state.file_reset}",
                 help="Carregar primeira planilha para comparação"
@@ -1283,7 +1283,7 @@ def main():
         with col2:
             st.session_state.file2 = st.file_uploader(
                 "Carregar Arquivo Excel 2", 
-                type=["xlsx", "xls", "xlsm"],
+                type=["xlsx", "xls"],
                 accept_multiple_files=False, 
                 key=f"wb2_{st.session_state.file_reset}",
                 help="Carregar segunda planilha para comparação"
