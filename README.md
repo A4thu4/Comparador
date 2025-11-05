@@ -20,7 +20,7 @@ Uma ferramenta feita com Streamlit para comparar **textos, documentos e planilha
 
 ## 🛠 Tecnologias utilizadas
 
-- [Python 3.9+](https://www.python.org/)
+- [Python 3.11+](https://www.python.org/)
 - [Streamlit](https://streamlit.io/)
 - Pandas / NumPy
 - PyPDF2 / pdfplumber / python-docx
