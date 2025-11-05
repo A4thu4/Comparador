@@ -62,6 +62,7 @@ Uma ferramenta feita com Streamlit para comparar **textos, documentos e planilha
 ```bash
 📦 Comparador /
 ├── assets/                 # Imagens e licença
+├── Dockerfile              # Arquivo para hospedagem em nuvem com Docker
 ├── main.py                 # Código principal do Streamlit
 ├── README.md               # Este arquivo
 ├── requirements.txt        # Dependências do projeto
