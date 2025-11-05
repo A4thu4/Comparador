@@ -82,6 +82,12 @@ Uma ferramenta feita com Streamlit para comparar **textos, documentos e planilha
 
 ---
 
+## 🌐 Link do Comparador
+
+- [COMPARADOR](https://comparador-gncp-sead.streamlit.app/)
+
+---
+
 ## 👨‍💻 Desenvolvedor
 
 > Feito por Arthur Mamedes – Estudante de Ciência da Computação e estagiário na Gerência de Normas e Critérios de Produtividade (GNCP).
