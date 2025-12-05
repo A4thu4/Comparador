@@ -17,4 +17,4 @@ COPY . .
 EXPOSE 8501
 
 # Define o comando para iniciar a aplicação quando o container for executado
-CMD ["streamlit", "run", "main.py"]
+CMD ["streamlit", "run", "main.py", "--server.port", "8080", "--server.address", "0.0.0.0"]
