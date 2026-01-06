@@ -1,5 +1,6 @@
 # Comparador
-# 🧠 Comparador GNCP
+
+## 🧠 Comparador GNCP
 
 Uma ferramenta feita com Streamlit para comparar **textos, documentos e planilhas** com visual profissional, pensado para facilitar o trabalho na análise de alterações entre versões de arquivos usados na Gerência de Normas e Critérios de Produtividade.
 
@@ -33,12 +34,14 @@ Uma ferramenta feita com Streamlit para comparar **textos, documentos e planilha
 ## ⚙️ Como rodar localmente
 
 1. **Clone o repositório**:
+
    ```bash
    git clone https://github.com/A4thu4/Comparador.git
    cd Comparador
    ```
 
 2. **Crie o ambiente virtual**:
+
    ```bash
    python -m venv .venv
    source .venv/bin/activate  # Linux/Mac
@@ -46,11 +49,13 @@ Uma ferramenta feita com Streamlit para comparar **textos, documentos e planilha
    ```
 
 3. **Instale as dependências**:
+
    ```bash
    pip install -r requirements.txt
    ```
 
 4. **Rode o app**:
+
    ```bash
    streamlit run main.py
    ```
@@ -73,13 +78,16 @@ Uma ferramenta feita com Streamlit para comparar **textos, documentos e planilha
 
 ## 📷 Exemplos de uso
 
-### Comparação de textos:
+### Comparação de textos
+
 ![text](assets/image-text.png)
 
-### Comparação de documentos:
+### Comparação de documentos
+
 ![doc](assets/image-doc.png)
 
-### Comparação de planilhas:
+### Comparação de planilhas
+
 ![excel](assets/image-excel.png)
 
 ---
@@ -94,7 +102,7 @@ Uma ferramenta feita com Streamlit para comparar **textos, documentos e planilha
 
 > Feito por Arthur Mamedes – Estudante de Ciência da Computação e estagiário na Gerência de Normas e Critérios de Produtividade (GNCP).
 
-📬 arthurmamedesborges@gmail.com
+📬 <arthurmamedesborges@gmail.com>
 
 ---
 
