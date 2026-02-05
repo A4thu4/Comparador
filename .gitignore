@@ -1,0 +1,7 @@
+.vscode/
+*.log
+*.exe
+*.o
+*.obj
+*.ini
+.devcontainer/
