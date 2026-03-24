@@ -1,7 +1,11 @@
+.venv/
+.env/
+.idea/
 .vscode/
+.devcontainer/
 *.log
 *.exe
 *.o
 *.obj
 *.ini
-.devcontainer/
+*.pyc
